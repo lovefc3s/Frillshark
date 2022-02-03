@@ -18,3 +18,5 @@ gtk3.0,gtkmm3.0
 $ ./bld.sh  
 
 ## 03. Execute (Frillshark)  
+
+Driver:選択指がなければセットアップをやり直してください。  
