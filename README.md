@@ -12,7 +12,9 @@ Use gtkmm3.0 Lunux GUI Application
 または各ディストリビューション標準のセットアップ  
 libodbc.so,環境ファイル（odbc.ini,odbcinst.ini）をセットアップ  
 
-gtk3.0,gtkmm3.0
+gtk3.0,gtkmm3.0  
+  
 ## 02. SetUp
 $ ./bld.sh  
 
+## 03. Execute (Frillshark)  
