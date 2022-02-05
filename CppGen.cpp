@@ -94,6 +94,10 @@ int CppGen::Execute() {
 			break;
 	}
 	delete cm1;
+	if (vtbl->size() < 1) {
+		delete vtbl;
+		return SQL_NO_DATA;
+	}
 	for (int i = 0; i < vtbl->size(); i++) {
 		tblname = vtbl->at(i);
 		COdbcCommand *cm2 = new COdbcCommand(m_con);
@@ -158,7 +162,7 @@ int CppGen::Execute() {
 		std::string shellcom = "clang-format -i " + m_filename;
 		system(shellcom.c_str());
 	}
-	return (int)ret;
+	return SQL_SUCCESS;
 }
 void CppGen::OdbcCommonWrite() {
 	fs::path p = m_filename;
@@ -217,7 +221,6 @@ void CppGen::HeaderWrite(ofstream *ofile) {
 	*ofile << "#ifndef __" << destination << "__" << NL;
 	*ofile << "#define __" << destination << "__" << NL;
 	*ofile << "#include \"" << m_common << "\"" << NL;
-	*ofile << NL;
 }
 void CppGen::WriteRecConstructor(ofstream *outf, std::string classname) {
 	*outf << Tab << classname << "():COdbcRecord() { " << NL;
@@ -361,7 +364,8 @@ void CppGen::WriteRecordData(ofstream *outf,
 				len = MAXBUF;
 			else
 				len = wklen;
-			*outf << Tab << "SQLCHAR" << Tab << rec.COLUMN_NAME << "[" << len << "];" << NL;
+			*outf << Tab << "SQLCHAR" << Tab << rec.COLUMN_NAME << "[" << len
+				  << "];" << NL;
 			break;
 		}
 		default:
@@ -414,11 +418,16 @@ void CppGen::WriteTblConstructor(ofstream *outf, std::string &classname,
 	*outf << Tab << Tab << "COdbcColumn col;" << NL;
 	for (int j = 0; j < tbl->m_Data.size(); j++) {
 		CR_INFORMATION_SCHEMA_COLUMNS rec = tbl->m_Data.at(j);
-		*outf << Tab << Tab << "col.SetValue(\"" << rec.TABLE_CATALOG << "\",\"" << rec.TABLE_SCHEMA << "\",\"" << rec.TABLE_NAME 
-			<< "\",\"" << rec.COLUMN_NAME << "\",\"" << rec.ORDINAL_POSITION << "\",\"" << rec.COLUMN_DEFAULT << "\",\"" 
-			<< rec.IS_NULLABLE << "\",\"" << rec.DATA_TYPE << "\",\"" << rec.CHARACTER_MAXIMUM_LENGTH << "\",\"" << rec.CHARACTER_OCTET_LENGTH
-			<< "\",\"" << rec.NUMERIC_PRECISION << "\",\"" << rec.NUMERIC_SCALE << "\",\"" << rec.DATETIME_PRECISION 
-			<< "\",\"" << rec.CHARACTER_SET_NAME << "\",\"" << rec.COLLATION_NAME << "\",";
+		*outf << Tab << Tab << "col.SetValue(\"" << rec.TABLE_CATALOG << "\",\""
+			  << rec.TABLE_SCHEMA << "\",\"" << rec.TABLE_NAME << "\",\""
+			  << rec.COLUMN_NAME << "\",\"" << rec.ORDINAL_POSITION << "\",\""
+			  << rec.COLUMN_DEFAULT << "\",\"" << rec.IS_NULLABLE << "\",\""
+			  << rec.DATA_TYPE << "\",\"" << rec.CHARACTER_MAXIMUM_LENGTH
+			  << "\",\"" << rec.CHARACTER_OCTET_LENGTH << "\",\""
+			  << rec.NUMERIC_PRECISION << "\",\"" << rec.NUMERIC_SCALE
+			  << "\",\"" << rec.DATETIME_PRECISION << "\",\""
+			  << rec.CHARACTER_SET_NAME << "\",\"" << rec.COLLATION_NAME
+			  << "\",";
 		string stype = "";
 		switch (rec.sqltype) {
 		case _unknown:
@@ -504,7 +513,7 @@ void CppGen::WriteTblConstructor(ofstream *outf, std::string &classname,
 
 	*outf << Tab << "}" << NL;
 }
-void CppGen::WriteTblDestructor(ofstream *outf, std::string &classname){
+void CppGen::WriteTblDestructor(ofstream *outf, std::string &classname) {
 	*outf << Tab << "virtual ~" << classname << "() { " << NL;
 	*outf << Tab << Tab << "m_Data.clear();" << NL;
 	*outf << Tab << "}" << NL;

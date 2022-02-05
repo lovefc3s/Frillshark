@@ -29,8 +29,8 @@ private:
 	void on_hide_window();
 	bool Sqlite3Find();
 	std::string FindSettings(std::string &name);
-	int SelectSettings(std::string &name,std::string *value,double *dvalue);
-	int InsertSettings(std::string &name,std::string &value);
+	int SelectSettings(std::string &name, std::string *value, double *dvalue);
+	int InsertSettings(std::string &name, std::string &value);
 	void UpdateSettings(std::string &name, std::string &value, double dvalue);
 };
 #endif

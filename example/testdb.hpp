@@ -2,7 +2,7 @@
 	This file FrillShark Odbc C++ source Generation.
 	"testdb"".hpp"
 	Set_Driver("ODBC Driver 17 for SQL Server");
-	Set_Server("192.168.0.???");
+	Set_Server("192.168.???.???");
 	Set_UserID("testuser");
 	Set_Password(" .... ");
 	Set_Database("testdb");
@@ -15,7 +15,6 @@
 #ifndef __TESTDB_HPP__
 #define __TESTDB_HPP__
 #include "odbccommon_testdb.hpp"
-
 using namespace OdbcCommon;
 class CR_t_testtable : public COdbcRecord {
 public:

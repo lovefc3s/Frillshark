@@ -7,8 +7,8 @@
 #ifndef __STDAFX_HPP__
 #define __STDAFX_HPP__
 #ifndef __SQLITEFILE__
-#define __SQLITEFILE__  "./resources/Frillshark.sqlite3"
-#endif	//__SQLITEFILE__  
+#define __SQLITEFILE__ "./resources/Frillshark.sqlite3"
+#endif //__SQLITEFILE__
 #include <glibmm.h>
 #include <gtkmm.h>
 #include <gtkmm/window.h>

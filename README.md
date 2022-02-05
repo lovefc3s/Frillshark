@@ -30,5 +30,5 @@ Database:C++のclassを作成するデータベース
 ファイル名を入力してください。  
 
 ## 04. Example  
-testdbが存在する場合、"testdb.hpp" を
+testdbが存在する場合、"testdb.hpp","odbccommon_testdb.hpp" を
 作成します。（ファイル名はダイアログで指定した名称）  
