@@ -456,3 +456,4 @@ $RECYCLE.BIN/
 build.sh
 resources/*.bak
 resources/Frillshark.sqlite3
+example/.vscode/

@@ -508,13 +508,19 @@ protected:
 class COdbcConnection {
 public:
 	COdbcConnection() {
-		m_driver = "";
-		m_server = "";
-		m_database = "";
-		m_user = "";
-		m_password = "";
-		m_ConnectionString = "";
-		m_Connect = -1;
+		Initialize();
+	}
+	COdbcConnection( std::string Driver,
+		std::string Server,
+		std::string User,
+		std::string Password,
+		std::string Database ) {
+		Initialize();
+		m_driver = Driver;
+		m_server = Server;
+		m_database = Database;
+		m_user = User;
+		m_password = Password;
 	}
 	virtual ~COdbcConnection() {
 		if (m_Connect > -1) this->Disconnect();
@@ -522,20 +528,28 @@ public:
 		if (m_hdbc) SQLFreeHandle(SQL_HANDLE_DBC, m_hdbc);
 		if (m_henv) SQLFreeHandle(SQL_HANDLE_ENV, m_henv);
 	}
-
+protected:
+	void Initialize(){
+		m_driver = "";
+		m_server = "";
+		m_user = "";
+		m_password = "";
+		m_database = "";
+		m_ConnectionString = "";
+		m_Connect = -1;
+	}
 protected:
 	SQLHENV m_henv = SQL_NULL_HENV;	   // Environment
 	SQLHDBC m_hdbc = SQL_NULL_HDBC;	   // Connection handle
 	SQLHSTMT m_hstmt = SQL_NULL_HSTMT; // Statement handle
 	std::string m_driver;
 	std::string m_server;
-	std::string m_database;
 	std::string m_user;
 	std::string m_password;
+	std::string m_database;
 	std::string m_ConnectionString;
 	char m_ConnectAttr[256];
 	int m_Connect;
-
 public:
 	std::string Get_Driver() { return m_driver; }
 	void Set_Driver(std::string driver) {
