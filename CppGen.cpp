@@ -378,6 +378,7 @@ void CppGen::WriteTblConstructor(ofstream *outf, std::string &classname,
 								 CT_INFORMATION_SCHEMA_COLUMNS *tbl,
 								 std::string &tblname) {
 	*outf << Tab << classname << "():COdbcTable() { " << NL;
+	*outf << Tab << Tab << "m_TableName = \"" << tblname << "\";" << NL;
 	*outf << Tab << Tab << "m_SqlSELECT = \"SELECT \"" << NL;
 	std::stringstream insrt;
 	insrt << Tab << Tab << "m_SqlINSERT = \"INSERT INTO " << tblname << " (\""

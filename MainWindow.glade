@@ -5,9 +5,9 @@
   <object class="GtkWindow" id="MainWindow">
     <property name="can-focus">False</property>
     <property name="title" translatable="yes">Frillshark ODBC Generation For C++</property>
-    <property name="default-width">640</property>
-    <property name="default-height">480</property>
-    <property name="icon">rabuka.png</property>
+    <property name="default-width">280</property>
+    <property name="default-height">240</property>
+    <property name="icon">image/rabuka.png</property>
     <child>
       <object class="GtkBox">
         <property name="visible">True</property>

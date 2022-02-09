@@ -24,11 +24,26 @@ int main(int argc, char *argv[]) {
 		if (i != (tbl.ColumnCount() - 1))
 			ss << ", ";
 	}
-	ss << " FROM t_testtable";
+	ss << " FROM " << tbl.Get_Name();
 	sql = ss.str();
 	com.SetCommandString(sql);
 	com.mSQLExecDirect();
-	
+	SQLCHAR *name = new SQLCHAR[MAXBUF];
+	for (int i = 0;; i++) {
+		ret = com.mFetch();
+		if (ret == SQL_SUCCESS || ret == SQL_SUCCESS_WITH_INFO) {
+			CR_t_testtable rec;
+			SQLLEN len = 0;
+			memset(name, 0, MAXBUF);
+			com.GetData(1, SQL_C_LONG, &rec.id, 4, 0);
+			com.GetData(2, SQL_C_CHAR, name, MAXBUF, &len);
+			rec.name = (char *)name;
+			tbl.m_Data.push_back(rec);
+		} else
+			break;
+	}
+	delete[] name;
+
 	con.Disconnect();
 	return 0;
 }

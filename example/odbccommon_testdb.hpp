@@ -65,6 +65,13 @@ typedef enum {
 	_xml = 26,
 } eSqlType;
 
+typedef enum {
+	_NoModify = 0,
+	_Insert = 1,
+	_Update = 2,
+	_Delete = 3,
+} eRecordModify;
+
 class UtfConvartor{
 public:
 //
@@ -944,13 +951,19 @@ public:
 
 class COdbcRecord {
 public:
-	COdbcRecord() {}
+	COdbcRecord() { m_Modify = _NoModify; }
 	virtual ~COdbcRecord() {}
+protected:
+	eRecordModify m_Modify;
+
 };
 
 class COdbcTable {
 public:
-	COdbcTable() { m_Count = 0; }
+	COdbcTable() { 
+		m_Count = 0;
+		m_TableName = "";
+	}
 	virtual ~COdbcTable() { m_Column.clear(); }
 
 protected:
@@ -960,11 +973,13 @@ protected:
 	std::string m_SqlUPDATE;
 	std::string m_SqlDELETE;
 	std::vector<COdbcColumn> m_Column;
+	std::string m_TableName;
 public:
 	std::string Get_SELECT() { return m_SqlSELECT; }
 	std::string Get_INSERT() { return m_SqlINSERT; }
 	std::string Get_UPDATE() { return m_SqlUPDATE; }
 	std::string Get_DELETE() { return m_SqlDELETE; }
+	std::string Get_Name() { return m_TableName; }
 	COdbcColumn Column(int i) { return m_Column.at(i); }
 	int ColumnCount() { return m_Column.size(); }
 
