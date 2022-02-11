@@ -19,8 +19,8 @@ gtk3.0,gtkmm3.0
 $ ./bld.sh  
 
 ## 03. Execute (Frillshark)  
-
-### Driver:選択指がなければセットアップをやり直してください。  
+![Frilsharkform](image/FrillsharkScreenshot.png)  
+### Driver:選択子がなければセットアップをやり直してください。  
 ### server:サーバー名かIPアドレスを入力してください。  
 ### User ID:ユーザー名  
 ### Password:パスワード  
@@ -30,5 +30,6 @@ Database:C++のclassを作成するデータベース
 ファイル名を入力してください。  
 
 ## 04. Example  
+例として"testdb"のクラスを作成します。
 testdbが存在する場合、"testdb.hpp","odbccommon_testdb.hpp" を
-作成します。（ファイル名はダイアログで指定した名称）  
+作成します。（ファイル名は保存ダイアログで指定した名称）  

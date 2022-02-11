@@ -951,6 +951,8 @@ class COdbcRecord {
 public:
 	COdbcRecord() { m_Modify = _NoModify; }
 	virtual ~COdbcRecord() {}
+	eRecordModify get_Modify(){ return m_Modify; }
+	void set_Modify(eRecordModify value) { m_Modify = value; }
 protected:
 	eRecordModify m_Modify;
 

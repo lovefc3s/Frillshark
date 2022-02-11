@@ -133,6 +133,7 @@ int CppGen::Execute() {
 				tbl->Set_Data(cm2, &rec);
 				string type = (char *)rec.DATA_TYPE;
 				rec.sqltype = TypeComparison(type);
+				rec.set_Modify(_Select);
 				tbl->m_Data.push_back(rec);
 			} else
 				break;
