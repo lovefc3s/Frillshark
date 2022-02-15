@@ -8,7 +8,7 @@
             "name": "(gdb) 起動",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build/Frillshark",
+            "program": "${workspaceFolder}/build/test/Frillshark",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
