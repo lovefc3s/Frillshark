@@ -4,6 +4,14 @@
 #include <cctype>
 using namespace std;
 using namespace OdbcCommon;
+
+CCharBuffer::CCharBuffer() {
+	position = 0;
+	length = 0;
+	name = "";
+}
+CCharBuffer::~CCharBuffer() {}
+
 CppGen::CppGen(std::string filename, std::string ConnectionString,
 			   OdbcCommon::COdbcConnection *pconnection, bool UseClangFormat) {
 	m_filename = filename;
@@ -145,6 +153,7 @@ int CppGen::Execute() {
 		*outf << "public:" << NL;
 		WriteTblConstructor(outf, TblClassName, tbl, tblname);
 		WriteTblDestructor(outf, TblClassName);
+		WriteSetTableData(outf, RecClassName, tbl);
 		*outf << Tab << RecClassName << " operator[](int n) {" << NL;
 		*outf << Tab << Tab << "return m_Data.at(n);" << NL;
 		*outf << Tab << "}" << NL;
@@ -207,8 +216,6 @@ void CppGen::HeaderWrite(ofstream *ofile) {
 	std::string destination = "";
 	std::string source = p.stem().native() + p.extension().native();
 	destination.resize(source.size());
-	// std::transform(source.cbegin(), source.cend(),
-	// destination.begin(),toupper);
 	char buf[256];
 	memset(buf, 0, 256);
 	for (int j = 0; j < source.length(); j++) {
@@ -520,4 +527,195 @@ void CppGen::WriteTblDestructor(ofstream *outf, std::string &classname) {
 	*outf << Tab << Tab << "m_Data.clear();" << NL;
 	*outf << Tab << "}" << NL;
 	*outf << NL;
+}
+
+void CppGen::WriteSetTableData(ofstream *outf, std::string &recclassname,
+							   CT_INFORMATION_SCHEMA_COLUMNS *tbl) {
+	std::vector<CCharBuffer> bufnames;
+	*outf << "public:" << NL;
+	*outf << Tab << "SQLLEN Set_TableData(COdbcCommand *com) {" << NL;
+	*outf << Tab << Tab << "SQLRETURN ret = SQL_SUCCESS;" << NL;
+	*outf << Tab << Tab << "SQLLEN Count = 0;" << NL;
+	*outf << Tab << Tab << "this->m_Data.clear();" << NL;
+	*outf << Tab << Tab << "ret = com->mSQLExecDirect();" << NL;
+	*outf
+		<< Tab << Tab
+		<< "if (ret != SQL_SUCCESS && ret != SQL_SUCCESS_WITH_INFO) return -1;"
+		<< NL;
+	for (int j = 0; j < tbl->m_Data.size(); j++) {
+		CR_INFORMATION_SCHEMA_COLUMNS rec = tbl->m_Data.at(j);
+		CR_INFORMATION_SCHEMA_COLUMNS org = tbl->m_Data.at(j);
+		switch (rec.sqltype) {
+		case _unknown:
+		case _bit:
+		case _tinyint:
+		case _smallint:
+		case _int:
+		case _bigint:
+		case _decimal:
+		case _numeric:
+		case _real:
+		case _float:
+		case _smallmoney:
+		case _money:
+		case _date:
+		case _time:
+		case _datetime:
+		case _datetime2:
+		case _smalldatetime:
+		case _datetimeoffset: {
+		} break;
+		case _char:
+		case _varchar:
+		case _text:
+		case _nchar:
+		case _nvarchar:
+		case _ntext: {
+			CCharBuffer buf;
+			buf.name = (char *)rec.COLUMN_NAME;
+			rec.mLength = rec.CHARACTER_OCTET_LENGTH + 1;
+			if (rec.mLength > MAXBUF) {
+				rec.mLength = MAXBUF;
+				*outf << Tab << Tab << "char *" << buf.name
+					  << "= new char[MAXBUF];" << NL;
+			} else {
+				*outf << Tab << Tab << "char *" << buf.name << "= new char["
+					  << rec.mLength << "];" << NL;
+			}
+			buf.position = rec.ORDINAL_POSITION;
+			buf.length = rec.mLength;
+			bufnames.push_back(buf);
+		} break;
+		default:
+			break;
+		}
+	}
+	*outf << Tab << Tab << "for (int i = 0;;i++) {" << NL;
+	*outf << Tab << Tab << Tab << "ret = com->mFetch();" << NL;
+	*outf << Tab << Tab << Tab
+		  << "if (ret == SQL_SUCCESS || ret == SQL_SUCCESS_WITH_INFO) {" << NL;
+	*outf << Tab << Tab << Tab << Tab << recclassname << " rec;" << NL;
+	for (int j = 0; j < tbl->m_Data.size(); j++) {
+		CR_INFORMATION_SCHEMA_COLUMNS rec = tbl->m_Data.at(j);
+		switch (rec.sqltype) {
+		case _unknown:
+		case _bit:
+		case _tinyint:
+		case _smallint:
+		case _int:
+		case _bigint:
+		case _decimal:
+		case _numeric:
+		case _real:
+		case _float:
+		case _smallmoney:
+		case _money:
+		case _date:
+		case _time:
+		case _datetime:
+		case _datetime2:
+		case _smalldatetime:
+		case _datetimeoffset: {
+			*outf << Tab << Tab << Tab << Tab << "com->GetData(" << (j + 1) << ", "
+				  << this->Get_C_Type(rec.sqltype);
+			*outf << ", &rec." << rec.COLUMN_NAME << ", sizeof(rec."
+				  << rec.COLUMN_NAME << "), 0);" << NL;
+		} break;
+		case _char:
+		case _varchar:
+		case _text:
+		case _nchar:
+		case _nvarchar:
+		case _ntext: {
+			CCharBuffer buf = FindBuffer(&bufnames, rec.ORDINAL_POSITION);
+			*outf << Tab << Tab << Tab << Tab << "memset(" << rec.COLUMN_NAME << ",0,"
+				  << buf.length << ");" << NL;
+			*outf << Tab << Tab << Tab << Tab << "com->GetData(" << (j + 1)
+				  << ", SQL_C_CHAR, " << rec.COLUMN_NAME << ", " << buf.length
+				  << ", 0);" << NL;
+			*outf << Tab << Tab << Tab <<  Tab << "rec." << rec.COLUMN_NAME
+				  << " = (char *)" << rec.COLUMN_NAME << ";" << NL;
+		} break;
+		default:
+			break;
+		}
+	}
+	*outf << Tab << Tab << Tab << Tab << "m_Data.push_back(rec);" << NL;
+	*outf << Tab << Tab << Tab << Tab << "Count++;" << NL;
+	*outf << Tab << Tab << Tab << "} else break;" << NL;
+	*outf << Tab << Tab << "}" << NL;
+	for (int j = 0; j < bufnames.size(); j++) {
+		CCharBuffer buf = bufnames.at(j);
+		*outf << Tab << Tab << "delete[] " << buf.name << ";" << NL;
+	}
+	*outf << Tab << Tab << "return Count;" << NL;
+	*outf << Tab << "}" << NL;
+}
+CCharBuffer CppGen::FindBuffer(std::vector<CCharBuffer> *names, int position) {
+	for (int n = 0; n < names->size(); n++) {
+		CCharBuffer buf = names->at(n);
+		if (buf.position == position) return buf;
+	}
+	CCharBuffer err;
+	err.name = "";
+	err.position = -1;
+	err.length = 0;
+	return err;
+}
+
+std::string CppGen::Get_C_Type(eSqlType typ) {
+	std::string ret = "";
+	switch (typ) {
+	case _unknown:
+		ret = "SQL_C_CHAR";
+		break;
+	case _bit:
+		ret = "SQL_C_CHAR";
+		break;
+	case _tinyint:
+		ret = "SQL_C_CHAR";
+		break;
+	case _smallint:
+		ret = "SQL_C_SHORT";
+		break;
+	case _int:
+		ret = "SQL_C_LONG";
+		break;
+	// long long
+	case _bigint:
+		ret = "SQL_C_SBIGINT";
+		break;
+	case _decimal:
+	case _numeric:
+		ret = "SQL_C_CHAR";
+		break;
+	case _real:
+	case _float:
+		ret = "SQL_C_DOUBLE";
+		break;
+	case _smallmoney:
+	case _money:
+		ret = "SQL_C_CHAR";
+		break;
+	case _date:
+	case _time:
+	case _datetime:
+	case _datetime2:
+	case _smalldatetime:
+	case _datetimeoffset:
+		ret = "SQL_C_TYPE_TIMESTAMP";
+		break;
+	case _char:
+	case _varchar:
+	case _text:
+	case _nchar:
+	case _nvarchar:
+	case _ntext:
+		ret = "SQL_C_CHAR";
+		break;
+	default:
+		ret = "SQL_C_CHAR";
+		break;
+	}
+	return ret;
 }

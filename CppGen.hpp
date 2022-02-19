@@ -6,6 +6,16 @@
 #define Tab "\t"
 #define NL "\n"
 using namespace OdbcCommon;
+
+class CCharBuffer {
+public:
+	CCharBuffer();
+	virtual ~CCharBuffer();
+public:
+	int position;
+	int length;
+	std::string name;
+};
 class CR_INFORMATION_SCHEMA_COLUMNS : public COdbcRecord {
 public:
 	CR_INFORMATION_SCHEMA_COLUMNS() : COdbcRecord() { Initialize(); }
@@ -27,6 +37,7 @@ public:
 		memset(CHARACTER_SET_NAME, 0, 256);
 		memset(COLLATION_NAME, 0, 256);
 		sqltype = eSqlType::_unknown;
+		mLength = 0;
 	}
 
 public:
@@ -46,6 +57,7 @@ public:
 	SQLCHAR CHARACTER_SET_NAME[256];
 	SQLCHAR COLLATION_NAME[256];
 	OdbcCommon::eSqlType sqltype;
+	int mLength;
 };
 class CT_INFORMATION_SCHEMA_COLUMNS : public COdbcTable {
 public:
@@ -132,9 +144,12 @@ protected:
 							 CT_INFORMATION_SCHEMA_COLUMNS *tbl,
 							 std::string &tblname);
 	void WriteTblDestructor(ofstream *outf, std::string &classname);
+	void WriteSetTableData(ofstream *outf, std::string &classname,CT_INFORMATION_SCHEMA_COLUMNS *tbl);
 	OdbcCommon::eSqlType TypeComparison(std::string &type);
+	std::string Get_C_Type(eSqlType typ);
 
 private:
+	CCharBuffer FindBuffer(std::vector<CCharBuffer> *names, int position);
 	std::string m_filename;
 	std::string m_common;
 	std::string m_ConnectionString;

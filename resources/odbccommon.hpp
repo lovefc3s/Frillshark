@@ -954,12 +954,12 @@ public:
 		m_newF = false;
 	}
 	virtual ~COdbcRecord() {}
-	eRecordModify get_Modify(){ return m_Modify; }
+	eRecordModify get_Modify() { return m_Modify; }
 	void set_Modify(eRecordModify value) { m_Modify = value; }
-	bool get_Flg(){ return m_newF; }
+	bool get_Flg() { return m_newF; }
+	void set_Flg(bool value) { m_newF = value; }
 protected:
 	eRecordModify m_Modify;
-	void set_Flg(bool value){ m_newF = value; }
 private:
 	bool m_newF;
 };

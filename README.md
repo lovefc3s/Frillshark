@@ -33,3 +33,10 @@ Database:C++のclassを作成するデータベース
 例として"testdb"のクラスを作成します。
 testdbが存在する場合、"testdb.hpp","odbccommon_testdb.hpp" を
 作成します。（ファイル名は保存ダイアログで指定した名称）  
+
+
+## 備考  
+cmakeで Make を使う設定から Ninja を使う設定に変えました  
+".vscode/settings.json"で  
+"cmake.generator": "Unix Makefiles" から  
+"cmake.generator": "Ninja" へ変更しました。  

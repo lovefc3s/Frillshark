@@ -2,7 +2,7 @@
 	This file FrillShark Odbc C++ source Generation.
 	"testdb"".hpp"
 	Set_Driver("ODBC Driver 17 for SQL Server");
-	Set_Server("192.168.???.???");
+	Set_Server("192.168.1.16");
 	Set_UserID("testuser");
 	Set_Password(" .... ");
 	Set_Database("testdb");
@@ -58,6 +58,30 @@ public:
 	}
 	virtual ~CT_t_testtable() { m_Data.clear(); }
 
+public:
+	SQLLEN Set_TableData(COdbcCommand *com) {
+		SQLRETURN ret = SQL_SUCCESS;
+		SQLLEN Count = 0;
+		this->m_Data.clear();
+		ret = com->mSQLExecDirect();
+		if (ret != SQL_SUCCESS && ret != SQL_SUCCESS_WITH_INFO) return -1;
+		char *name = new char[51];
+		for (int i = 0;; i++) {
+			ret = com->mFetch();
+			if (ret == SQL_SUCCESS || ret == SQL_SUCCESS_WITH_INFO) {
+				CR_t_testtable rec;
+				com->GetData(1, SQL_C_LONG, &rec.id, sizeof(rec.id), 0);
+				memset(name, 0, 51);
+				com->GetData(2, SQL_C_CHAR, name, 51, 0);
+				rec.name = (char *)name;
+				m_Data.push_back(rec);
+				Count++;
+			} else
+				break;
+		}
+		delete[] name;
+		return Count;
+	}
 	CR_t_testtable operator[](int n) { return m_Data.at(n); }
 
 public:
