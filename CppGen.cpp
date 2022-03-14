@@ -21,14 +21,13 @@ CppGen::CppGen(std::string filename, std::string ConnectionString,
 	m_con = pconnection;
 	// m_Types = new std::vector<std::string>();
 }
-CppGen::~CppGen() {}
+CppGen::~CppGen() { m_Key.m_Data.clear(); }
 int CppGen::Execute() {
 	SQLRETURN ret;
 	ret = m_con->DriverConnect();
 	if (ret != SQL_SUCCESS && ret != SQL_SUCCESS_WITH_INFO) return ret;
 	string sql = "";
 	this->OdbcCommonWrite();
-	int servertype = 0;
 	fs::path p = m_filename;
 	OdbcCommon::COdbcCommand *cm1 = new COdbcCommand(m_con);
 	sql = "select @@version;";
@@ -56,22 +55,22 @@ int CppGen::Execute() {
 	delete cm1;
 	if (m_ServarVarsion.length() < 1) return SQL_ERROR;
 	if (m_ServarVarsion.find("Microsoft SQL Server") != std::string::npos) {
-		servertype = 1;
+		mservertype = 1;
 	} else if (m_ServarVarsion.find("MySQL") != std::string::npos) {
-		servertype = 2;
+		mservertype = 2;
 	} else if (m_ServarVarsion.find("8.0") != std::string::npos) {
-		servertype = 2;
+		mservertype = 2;
 	} else if (m_ServarVarsion.find("PostgreSQL") != std::string::npos) {
-		servertype = 3;
+		mservertype = 3;
 	}
-	if (servertype == 0) return SQL_ERROR;
+	if (mservertype == 0) return SQL_ERROR;
 	cm1 = new COdbcCommand(m_con);
 	ofstream *outf = new ofstream(m_filename);
 	HeaderWrite(outf);
 	*outf << "using namespace OdbcCommon;" << NL;
 	sql = "SELECT TABLE_CATALOG, TABLE_SCHEMA, TABLE_NAME,"
 		  "TABLE_TYPE FROM INFORMATION_SCHEMA.TABLES ";
-	switch (servertype) {
+	switch (mservertype) {
 	case 1:
 		sql = sql + " WHERE TABLE_CATALOG = '" + m_con->Get_Database() + "';";
 		break;
@@ -116,7 +115,7 @@ int CppGen::Execute() {
 			  "NUMERIC_PRECISION, NUMERIC_SCALE, DATETIME_PRECISION, "
 			  "CHARACTER_SET_NAME, COLLATION_NAME "
 			  "FROM INFORMATION_SCHEMA.COLUMNS ";
-		if (servertype == 2) {
+		if (mservertype == 2) {
 			sql = sql + " WHERE TABLE_SCHEMA = '" + m_con->Get_Database() +
 				  "' AND TABLE_NAME = '" + tblname +
 				  "' ORDER BY ORDINAL_POSITION;";
@@ -134,6 +133,15 @@ int CppGen::Execute() {
 		CT_INFORMATION_SCHEMA_COLUMNS *tbl =
 			new CT_INFORMATION_SCHEMA_COLUMNS();
 		ret = cm2->mSQLExecDirect(sql);
+		COdbcConnection consys;
+
+		consys.Set_Driver(m_con->Get_Driver());
+		consys.Set_Server(m_con->Get_Server());
+		consys.Set_UserID(m_con->Get_UserID());
+		consys.Set_Password(m_con->Get_Password());
+		consys.Set_Database(m_con->Get_Database());
+		consys.DriverConnect();
+
 		for (int j = 0;; j++) {
 			ret = cm2->mFetch();
 			if (ret == SQL_SUCCESS || ret == SQL_SUCCESS_WITH_INFO) {
@@ -142,13 +150,33 @@ int CppGen::Execute() {
 				string type = (char *)rec.DATA_TYPE;
 				rec.sqltype = TypeComparison(type);
 				rec.set_Modify(_Select);
+				if (mservertype == 1) {
+					string ident = "SELECT name,column_id,is_identity from "
+								   "sys.columns where object_Id = OBJECT_ID('" +
+								   tblname + "','U') and name = '" +
+								   (char *)rec.COLUMN_NAME + "'";
+					COdbcCommand csys(&consys);
+					ret = csys.mSQLExecDirect(ident);
+					if (ret == SQL_SUCCESS || ret == SQL_SUCCESS_WITH_INFO) {
+						ret = csys.mFetch();
+						if (ret == SQL_SUCCESS ||
+							ret == SQL_SUCCESS_WITH_INFO) {
+							csys.GetData(3, SQL_C_LONG, &rec.mIdentity, 4, 0);
+						}
+					}
+				}
 				tbl->m_Data.push_back(rec);
 			} else
 				break;
 		}
+		consys.Disconnect();
 		WriteRecInitialize(outf, tbl);
 		WriteRecordData(outf, tbl);
 		*outf << "};" << NL;
+		/*
+			Table Class
+		*/
+		GetKeyColumnUsage(outf, m_con, tblname);
 		*outf << "class " << TblClassName << ":public COdbcTable {" << NL;
 		*outf << "public:" << NL;
 		WriteTblConstructor(outf, TblClassName, tbl, tblname);
@@ -157,6 +185,7 @@ int CppGen::Execute() {
 		*outf << Tab << RecClassName << " operator[](int n) {" << NL;
 		*outf << Tab << Tab << "return m_Data.at(n);" << NL;
 		*outf << Tab << "}" << NL;
+		WriteWherePrimaryKey(outf, RecClassName);
 		*outf << "public:" << NL;
 		*outf << Tab << "std::vector<" << RecClassName << "> m_Data;";
 		*outf << "};" << NL;
@@ -173,6 +202,22 @@ int CppGen::Execute() {
 		system(shellcom.c_str());
 	}
 	return SQL_SUCCESS;
+}
+void CppGen::WriteWherePrimaryKey(ofstream *outf, std::string &Recordclassname) {
+	*outf << Tab << "std::string WherePrimaryKey(" << Recordclassname
+		  << " &rec) {" << NL;
+	*outf << Tab << Tab << "std::string sql = \"\";" << NL;
+	*outf << Tab << Tab << "for (int j = 0; j < this->KeyCount(); j++) {" << NL;
+	*outf << Tab << Tab << Tab << "if (j == 0) sql = \" WHERE \";" << NL;
+	*outf << Tab << Tab << Tab << "else sql = sql + \" AND \";" << NL;
+	*outf << Tab << Tab << Tab
+		  << "int pos = this->Key(j).KEY_ORDINAL_POSITION - 1;" << NL;
+	*outf << Tab << Tab << Tab
+		  << "sql = sql + this->Key(j).KEY_COLUMN_NAME + \" = '\" + rec[pos] + "
+			 "\"'\";" << NL;
+	*outf << Tab << Tab << "}" << NL;
+	*outf << Tab << Tab << "return sql;" << NL;
+	*outf << Tab << "}" << NL;
 }
 void CppGen::OdbcCommonWrite() {
 	fs::path p = m_filename;
@@ -230,6 +275,35 @@ void CppGen::HeaderWrite(ofstream *ofile) {
 	*ofile << "#define __" << destination << "__" << NL;
 	*ofile << "#include \"" << m_common << "\"" << NL;
 }
+void CppGen::GetKeyColumnUsage(ofstream *ofile, COdbcConnection *con,
+							   std::string tablename) {
+	std::string strSql =
+		"SELECT CONSTRAINT_NAME, TABLE_CATALOG, TABLE_SCHEMA, TABLE_NAME, "
+		"COLUMN_NAME, ORDINAL_POSITION FROM "
+		"INFORMATION_SCHEMA.KEY_COLUMN_USAGE ";
+	if (mservertype == 2) {
+		strSql = strSql + " WHERE TABLE_SCHEMA = '" + con->Get_Database() +
+				 "' AND TABLE_NAME = '" + tablename + "' ";
+	} else {
+		strSql = strSql + " WHERE TABLE_CATALOG = '" + con->Get_Database() +
+				 "' AND TABLE_NAME = '" + tablename + "' ";
+	}
+	strSql = strSql + "  ORDER BY CONSTRAINT_NAME,ORDINAL_POSITION;";
+	m_Key.m_Data.clear();
+	COdbcCommand *com = new COdbcCommand(con);
+	SQLRETURN ret = com->mSQLExecDirect(strSql);
+	for (int j = 0;; j++) {
+		ret = com->mFetch();
+		if (ret == SQL_SUCCESS || ret == SQL_SUCCESS_WITH_INFO) {
+			CR_INFORMATION_SCHEMA_KEY_COLUMN_USAGE rec;
+			m_Key.Set_Data(com, &rec);
+			m_Key.m_Data.push_back(rec);
+		} else
+			break;
+	}
+	delete com;
+}
+
 void CppGen::WriteRecConstructor(ofstream *outf, std::string classname) {
 	*outf << Tab << classname << "():COdbcRecord() { " << NL;
 	*outf << Tab << Tab << "Initialize();" << NL;
@@ -400,27 +474,40 @@ void CppGen::WriteTblConstructor(ofstream *outf, std::string &classname,
 			*outf << Tab << Tab << Tab << "\"" << rec.COLUMN_NAME << "\"" << NL;
 			*outf << Tab << Tab << Tab << "\" FROM " << rec.TABLE_NAME << "\";"
 				  << NL;
-			insrt << Tab << Tab << Tab << "\"" << rec.COLUMN_NAME
-				  << ") VALUES \"" << NL;
-			insrt << Tab << Tab << Tab << "\"( ";
-			for (int j = 0; j < tbl->m_Data.size(); j++) {
-				if (j == (tbl->m_Data.size() - 1)) {
-					insrt << "? )\";";
-				} else {
-					insrt << "?,";
+			if (rec.mIdentity == 0) {
+				insrt << Tab << Tab << Tab << "\"" << rec.COLUMN_NAME;
+				if (FindKey(rec) == -1){
+					updat << Tab << Tab << Tab << "\"" << rec.COLUMN_NAME << " = ?\";"
+						<< NL;
 				}
 			}
-			updat << Tab << Tab << Tab << "\"" << rec.COLUMN_NAME << " = ?\";"
-				  << NL;
+			insrt << ")\"" << NL;
 		} else {
 			*outf << Tab << Tab << Tab << "\"" << rec.COLUMN_NAME << ",\""
 				  << NL;
-			insrt << Tab << Tab << Tab << "\"" << rec.COLUMN_NAME << ",\""
-				  << NL;
-			updat << Tab << Tab << Tab << "\"" << rec.COLUMN_NAME << " = ?,\""
-				  << NL;
+			if (rec.mIdentity == 0) {
+				insrt << Tab << Tab << Tab << "\"" << rec.COLUMN_NAME << ",\""
+					  << NL;
+				if (FindKey(rec) == -1){
+					updat << Tab << Tab << Tab << "\"" << rec.COLUMN_NAME << " = ?\","
+						<< NL;
+				}
+			}
 		}
 	}
+	insrt << Tab << Tab << Tab << "\" VALUES ( ";
+	for (int j = 0; j < tbl->m_Data.size(); j++) {
+		CR_INFORMATION_SCHEMA_COLUMNS rc2 = tbl->m_Data.at(j);
+		if (rc2.mIdentity == 0) {
+			insrt << "?";
+			if (j == (tbl->m_Data.size() - 1)) {
+				insrt << ")";
+			} else {
+				insrt << ",";
+			}
+		}
+	}
+	insrt << "\";";
 	*outf << insrt.str() << NL;
 	*outf << updat.str() << NL;
 	*outf << Tab << Tab << "m_SqlDELETE = \"DELETE " << tblname << " \";" << NL;
@@ -436,7 +523,7 @@ void CppGen::WriteTblConstructor(ofstream *outf, std::string &classname,
 			  << rec.NUMERIC_PRECISION << "\",\"" << rec.NUMERIC_SCALE
 			  << "\",\"" << rec.DATETIME_PRECISION << "\",\""
 			  << rec.CHARACTER_SET_NAME << "\",\"" << rec.COLLATION_NAME
-			  << "\",";
+			  << "\"," << rec.mIdentity << ",";
 		string stype = "";
 		switch (rec.sqltype) {
 		case _unknown:
@@ -516,12 +603,24 @@ void CppGen::WriteTblConstructor(ofstream *outf, std::string &classname,
 			stype = "_unknown";
 			break;
 		}
-		*outf << stype << ");" << NL;
+		*outf << stype << ", ";
+		int pos = FindKey(rec);
+		*outf << pos;
+		*outf << ");" << NL;
 		*outf << Tab << Tab << "m_Column.push_back(col);" << NL;
 	}
-
+	*outf << Tab << Tab << "m_Key.clear();" << NL;
+	*outf << Tab << Tab << "COdbcKeyColumn key;" << NL;
+	for (int i = 0; i < m_Key.m_Data.size(); i++) {
+		CR_INFORMATION_SCHEMA_KEY_COLUMN_USAGE rec = m_Key.m_Data.at(i);
+		*outf << Tab << Tab << "key.Set_Value(\"" << rec.CONSTRAINT_NAME
+			  << "\",\"" << rec.COLUMN_NAME << "\"," << rec.ORDINAL_POSITION
+			  << ");" << NL;
+		*outf << Tab << Tab << "m_Key.push_back(key);" << NL;
+	}
 	*outf << Tab << "}" << NL;
 }
+
 void CppGen::WriteTblDestructor(ofstream *outf, std::string &classname) {
 	*outf << Tab << "virtual ~" << classname << "() { " << NL;
 	*outf << Tab << Tab << "m_Data.clear();" << NL;
@@ -616,8 +715,8 @@ void CppGen::WriteSetTableData(ofstream *outf, std::string &recclassname,
 		case _datetime2:
 		case _smalldatetime:
 		case _datetimeoffset: {
-			*outf << Tab << Tab << Tab << Tab << "com->GetData(" << (j + 1) << ", "
-				  << this->Get_C_Type(rec.sqltype);
+			*outf << Tab << Tab << Tab << Tab << "com->GetData(" << (j + 1)
+				  << ", " << this->Get_C_Type(rec.sqltype);
 			*outf << ", &rec." << rec.COLUMN_NAME << ", sizeof(rec."
 				  << rec.COLUMN_NAME << "), 0);" << NL;
 		} break;
@@ -628,12 +727,12 @@ void CppGen::WriteSetTableData(ofstream *outf, std::string &recclassname,
 		case _nvarchar:
 		case _ntext: {
 			CCharBuffer buf = FindBuffer(&bufnames, rec.ORDINAL_POSITION);
-			*outf << Tab << Tab << Tab << Tab << "memset(" << rec.COLUMN_NAME << ",0,"
-				  << buf.length << ");" << NL;
+			*outf << Tab << Tab << Tab << Tab << "memset(" << rec.COLUMN_NAME
+				  << ",0," << buf.length << ");" << NL;
 			*outf << Tab << Tab << Tab << Tab << "com->GetData(" << (j + 1)
 				  << ", SQL_C_CHAR, " << rec.COLUMN_NAME << ", " << buf.length
 				  << ", 0);" << NL;
-			*outf << Tab << Tab << Tab <<  Tab << "rec." << rec.COLUMN_NAME
+			*outf << Tab << Tab << Tab << Tab << "rec." << rec.COLUMN_NAME
 				  << " = (char *)" << rec.COLUMN_NAME << ";" << NL;
 		} break;
 		default:
@@ -650,6 +749,33 @@ void CppGen::WriteSetTableData(ofstream *outf, std::string &recclassname,
 	}
 	*outf << Tab << Tab << "return Count;" << NL;
 	*outf << Tab << "}" << NL;
+	*outf << Tab
+		  << "SQLLEN Set_TableData(COdbcCommand *com,std::string "
+			 "ConditionalFormula, std::string OrderBy = \"\") {"
+		  << NL;
+	*outf << Tab << Tab << "std::string sql = this->Get_SELECT();" << NL;
+	*outf << Tab << Tab << "if (ConditionalFormula.length()>0){" << NL;
+	*outf << Tab << Tab << Tab
+		  << "sql = sql + \" WHERE \" + ConditionalFormula;" << NL;
+	*outf << Tab << Tab << "}" << NL;
+	*outf << Tab << Tab << "if (OrderBy.length()>0){" << NL;
+	*outf << Tab << Tab << Tab << "sql = sql + \" ORDER BY \" + OrderBy;" << NL;
+	*outf << Tab << Tab << "}" << NL;
+	*outf << Tab << Tab << "com->SetCommandString(sql);" << NL;
+	*outf << Tab << Tab << "return this->Set_TableData(com);" << NL;
+	*outf << Tab << "}" << NL;
+}
+int CppGen::FindKey(CR_INFORMATION_SCHEMA_COLUMNS &rec) {
+	int ret = -1;
+	std::string COLUMN_NAME = (char *)rec.COLUMN_NAME;
+	for (int n = 0; n < m_Key.m_Data.size();n++){
+		std::string name = (char *)m_Key.m_Data[n].COLUMN_NAME;
+		if (COLUMN_NAME == name ) {
+			ret = n;
+			break;
+		}
+	}
+	return ret;
 }
 CCharBuffer CppGen::FindBuffer(std::vector<CCharBuffer> *names, int position) {
 	for (int n = 0; n < names->size(); n++) {

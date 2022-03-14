@@ -40,3 +40,9 @@ cmakeで Make を使う設定から Ninja を使う設定に変えました
 ".vscode/settings.json"で  
 "cmake.generator": "Unix Makefiles" から  
 "cmake.generator": "Ninja" へ変更しました。  
+  
+## 注意...  
+.Connection 1つに対して複数の Command 実行できない  
+.Connection に1つの command 1つの Tranzaction
+  
+  

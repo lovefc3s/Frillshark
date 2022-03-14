@@ -4,11 +4,6 @@
 #include <windows.h>
 #endif
 #include <array>
-#include <iostream>
-#include <sstream>
-#include <string>
-#include <vector>
-#include <locale>
 #include <cmath>
 #include <codecvt>
 #include <cstdio>
@@ -16,8 +11,13 @@
 #include <cuchar>
 #include <cwchar>
 #include <iconv.h>
+#include <iostream>
+#include <locale>
 #include <sql.h>
 #include <sqlext.h>
+#include <sstream>
+#include <string>
+#include <vector>
 //#include <msclr/marshal_cppstd.h>
 //#include <emmintrin.h>
 #define MAXBUF 1048576
@@ -70,11 +70,11 @@ typedef enum {
 	_Delete = 4,
 } eRecordModify;
 
-class UtfConvartor{
+class UtfConvartor {
 public:
-//
-// utf32 to utf8
-//
+	//
+	// utf32 to utf8
+	//
 	static bool ConvChU32ToU8(const char32_t u32Ch, std::array<char, 4> &u8Ch) {
 		if (u32Ch < 0 || u32Ch > 0x10FFFF) {
 			return false;
@@ -105,7 +105,7 @@ public:
 		return true;
 	}
 
-// UTF-8 から UTF-32
+	// UTF-8 から UTF-32
 
 	static int GetU8ByteCount(char ch) {
 		if (0 <= uint8_t(ch) && uint8_t(ch) < 0x80) {
@@ -123,9 +123,12 @@ public:
 		return 0;
 	}
 
-	static bool IsU8LaterByte(char ch) { return 0x80 <= uint8_t(ch) && uint8_t(ch) < 0xC0; }
+	static bool IsU8LaterByte(char ch) {
+		return 0x80 <= uint8_t(ch) && uint8_t(ch) < 0xC0;
+	}
 
-	static bool ConvChU8ToU32(const std::array<char, 4> &u8Ch, char32_t &u32Ch) {
+	static bool ConvChU8ToU32(const std::array<char, 4> &u8Ch,
+							  char32_t &u32Ch) {
 		int numBytes = GetU8ByteCount(u8Ch[0]);
 		if (numBytes == 0) {
 			return false;
@@ -149,7 +152,8 @@ public:
 			if (!IsU8LaterByte(u8Ch[1]) || !IsU8LaterByte(u8Ch[2])) {
 				return false;
 			}
-			if ((uint8_t(u8Ch[0]) & 0x0F) == 0 && (uint8_t(u8Ch[1]) & 0x20) == 0) {
+			if ((uint8_t(u8Ch[0]) & 0x0F) == 0 &&
+				(uint8_t(u8Ch[1]) & 0x20) == 0) {
 				return false;
 			}
 
@@ -158,10 +162,12 @@ public:
 			u32Ch |= char32_t(u8Ch[2] & 0x3F);
 			break;
 		case 4:
-			if (!IsU8LaterByte(u8Ch[1]) || !IsU8LaterByte(u8Ch[2]) || !IsU8LaterByte(u8Ch[3])) {
+			if (!IsU8LaterByte(u8Ch[1]) || !IsU8LaterByte(u8Ch[2]) ||
+				!IsU8LaterByte(u8Ch[3])) {
 				return false;
 			}
-			if ((uint8_t(u8Ch[0]) & 0x07) == 0 && (uint8_t(u8Ch[1]) & 0x30) == 0) {
+			if ((uint8_t(u8Ch[0]) & 0x07) == 0 &&
+				(uint8_t(u8Ch[1]) & 0x30) == 0) {
 				return false;
 			}
 
@@ -176,11 +182,12 @@ public:
 
 		return true;
 	}
-//
-// UTF-16
-// UTF-32 から UTF-16
-//
-	static bool ConvChU32ToU16(const char32_t u32Ch, std::array<char16_t, 2> &u16Ch) {
+	//
+	// UTF-16
+	// UTF-32 から UTF-16
+	//
+	static bool ConvChU32ToU16(const char32_t u32Ch,
+							   std::array<char16_t, 2> &u16Ch) {
 		if (u32Ch < 0 || u32Ch > 0x10FFFF) {
 			return false;
 		}
@@ -195,17 +202,23 @@ public:
 
 		return true;
 	}
-//
-// UTF-16 から UTF-32
-//
-	static bool IsU16HighSurrogate(char16_t ch) { return 0xD800 <= ch && ch < 0xDC00; }
+	//
+	// UTF-16 から UTF-32
+	//
+	static bool IsU16HighSurrogate(char16_t ch) {
+		return 0xD800 <= ch && ch < 0xDC00;
+	}
 
-	static bool IsU16LowSurrogate(char16_t ch) { return 0xDC00 <= ch && ch < 0xE000; }
+	static bool IsU16LowSurrogate(char16_t ch) {
+		return 0xDC00 <= ch && ch < 0xE000;
+	}
 
-	static bool ConvChU16ToU32(const std::array<char16_t, 2> &u16Ch, char32_t &u32Ch) {
+	static bool ConvChU16ToU32(const std::array<char16_t, 2> &u16Ch,
+							   char32_t &u32Ch) {
 		if (IsU16HighSurrogate(u16Ch[0])) {
 			if (IsU16LowSurrogate(u16Ch[1])) {
-				u32Ch = 0x10000 + (char32_t(u16Ch[0]) - 0xD800) * 0x400 + (char32_t(u16Ch[1]) - 0xDC00);
+				u32Ch = 0x10000 + (char32_t(u16Ch[0]) - 0xD800) * 0x400 +
+						(char32_t(u16Ch[1]) - 0xDC00);
 			} else if (u16Ch[1] == 0) {
 				u32Ch = u16Ch[0];
 			} else {
@@ -223,13 +236,14 @@ public:
 
 		return true;
 	}
-//
-// UTF-8 から UTF-16 または UTF-16 から UTF-8
-//
-//一度 UTF-32 に変換し、UTF-8、UTF-16 へ変換します。
-// UTF-8 から UTF-16
-//
-	static bool ConvChU8ToU16(const std::array<char, 4> &u8Ch, std::array<char16_t, 2> &u16Ch) {
+	//
+	// UTF-8 から UTF-16 または UTF-16 から UTF-8
+	//
+	//一度 UTF-32 に変換し、UTF-8、UTF-16 へ変換します。
+	// UTF-8 から UTF-16
+	//
+	static bool ConvChU8ToU16(const std::array<char, 4> &u8Ch,
+							  std::array<char16_t, 2> &u16Ch) {
 		char32_t u32Ch;
 		if (!ConvChU8ToU32(u8Ch, u32Ch)) {
 			return false;
@@ -239,10 +253,11 @@ public:
 		}
 		return true;
 	}
-//
-// UTF-16 から UTF-8
-//
-	static bool ConvChU16ToU8(const std::array<char16_t, 2> &u16Ch, std::array<char, 4> &u8Ch) {
+	//
+	// UTF-16 から UTF-8
+	//
+	static bool ConvChU16ToU8(const std::array<char16_t, 2> &u16Ch,
+							  std::array<char, 4> &u8Ch) {
 		char32_t u32Ch;
 		if (!ConvChU16ToU32(u16Ch, u32Ch)) {
 			return false;
@@ -252,11 +267,11 @@ public:
 		}
 		return true;
 	}
-//
-//文字列
-//
-//後は文字列の各文字を変換していきます。
-//
+	//
+	//文字列
+	//
+	//後は文字列の各文字を変換していきます。
+	//
 	static bool ConvU8ToU16(const std::string &u8Str, std::u16string &u16Str) {
 		for (auto u8It = u8Str.begin(); u8It != u8Str.end(); ++u8It) {
 			auto numBytes = GetU8ByteCount((*u8It));
@@ -349,7 +364,8 @@ public:
 		return true;
 	}
 
-	static bool ConvU16ToU32(const std::u16string &u16Str, std::u32string &u32Str) {
+	static bool ConvU16ToU32(const std::u16string &u16Str,
+							 std::u32string &u32Str) {
 		for (auto u16It = u16Str.begin(); u16It != u16Str.end(); ++u16It) {
 			std::array<char16_t, 2> u16Ch;
 			if (IsU16HighSurrogate((*u16It))) {
@@ -397,7 +413,8 @@ public:
 		return true;
 	}
 
-	static bool ConvU32ToU16(const std::u32string &u32Str, std::u16string &u16Str) {
+	static bool ConvU32ToU16(const std::u32string &u32Str,
+							 std::u16string &u16Str) {
 		for (auto u32It = u32Str.begin(); u32It != u32Str.end(); ++u32It) {
 			std::array<char16_t, 2> u16Ch;
 			if (!ConvChU32ToU16((*u32It), u16Ch)) {
@@ -414,9 +431,9 @@ public:
 		return true;
 	}
 
-//
-// utf16 --> utf8
-//
+	//
+	// utf16 --> utf8
+	//
 	static bool UtfConv(char *pout, char16_t *pin) {
 		bool ret = false;
 		mbstate_t st = {0};
@@ -457,18 +474,23 @@ public:
 		}
 	}
 	void Initialize() { this->Initialize(&data); }
-	static std::string to_string(SQL_TIMESTAMP_STRUCT *ptr, char separator, bool time) {
+	static std::string to_string(SQL_TIMESTAMP_STRUCT *ptr, char separator,
+								 bool time) {
 		std::stringstream ss;
 		ss << ptr->year << separator << ptr->month << separator << ptr->day;
 		if (time) {
-			ss << " " << ptr->hour << ":" << ptr->minute << ":" << ptr->second << "." << ptr->fraction;
+			ss << " " << ptr->hour << ":" << ptr->minute << ":" << ptr->second
+			   << "." << ptr->fraction;
 		}
 		std::string ret = ss.str();
 		return ret;
 	}
-	std::string to_string(char separator, bool time) { return to_string(&data, separator, time); }
+	std::string to_string(char separator, bool time) {
+		return to_string(&data, separator, time);
+	}
 	std::string to_string() { return to_string(&data, '-', false); }
-	static void stringtodate(TIMESTAMP_STRUCT *ptr, std::string &strtim, std::string strsep = "-") {
+	static void stringtodate(TIMESTAMP_STRUCT *ptr, std::string &strtim,
+							 std::string strsep = "-") {
 		Initialize(ptr);
 		size_t s1 = strtim.find(strsep);
 		std::string yy = strtim.substr(0, s1);
@@ -513,16 +535,25 @@ protected:
 	TIMESTAMP_STRUCT data;
 };
 
+
+class COdbcParameter {
+public:
+	COdbcParameter() { 
+		position = -1;
+		name = "";
+		value = "";
+	}
+	virtual ~COdbcParameter(){}
+	int position;
+	std::string name;
+	std::string value;
+};
+
 class COdbcConnection {
 public:
-	COdbcConnection() {
-		Initialize();
-	}
-	COdbcConnection( std::string Driver,
-		std::string Server,
-		std::string User,
-		std::string Password,
-		std::string Database ) {
+	COdbcConnection() { Initialize(); }
+	COdbcConnection(std::string Driver, std::string Server, std::string User,
+					std::string Password, std::string Database) {
 		Initialize();
 		m_driver = Driver;
 		m_server = Server;
@@ -530,14 +561,28 @@ public:
 		m_user = User;
 		m_password = Password;
 	}
+	COdbcConnection &operator=(COdbcConnection &org) {
+		Initialize();
+		m_driver = org.m_driver;
+		m_server = org.m_server;
+		m_database = org.m_database;
+		m_user = org.m_user;
+		m_password = org.m_password;
+		m_ConnectionString = org.m_ConnectionString;
+		if ((org.m_Connect == SQL_SUCCESS) ||
+			(org.m_Connect == SQL_SUCCESS_WITH_INFO)) {
+			this->DriverConnect();
+		}
+	}
 	virtual ~COdbcConnection() {
 		if (m_Connect > -1) this->Disconnect();
 		if (m_hstmt) SQLFreeHandle(SQL_HANDLE_STMT, m_hstmt);
 		if (m_hdbc) SQLFreeHandle(SQL_HANDLE_DBC, m_hdbc);
 		if (m_henv) SQLFreeHandle(SQL_HANDLE_ENV, m_henv);
 	}
+
 protected:
-	void Initialize(){
+	void Initialize() {
 		m_driver = "";
 		m_server = "";
 		m_user = "";
@@ -546,6 +591,7 @@ protected:
 		m_ConnectionString = "";
 		m_Connect = -1;
 	}
+
 protected:
 	SQLHENV m_henv = SQL_NULL_HENV;	   // Environment
 	SQLHDBC m_hdbc = SQL_NULL_HDBC;	   // Connection handle
@@ -558,6 +604,7 @@ protected:
 	std::string m_ConnectionString;
 	char m_ConnectAttr[256];
 	int m_Connect;
+
 public:
 	std::string Get_Driver() { return m_driver; }
 	void Set_Driver(std::string driver) {
@@ -579,7 +626,9 @@ public:
 	std::string Get_Password() { return m_password; }
 	void Set_Password(std::string Password) { m_password = Password; }
 	std::string Get_ConnectionString() {
-		m_ConnectionString = "DRIVER={" + m_driver + "};SERVER=" + m_server + ";DATABASE=" + m_database + ";UID=" + m_user + ";PWD=" + m_password + ";";
+		m_ConnectionString = "DRIVER={" + m_driver + "};SERVER=" + m_server +
+							 ";DATABASE=" + m_database + ";UID=" + m_user +
+							 ";PWD=" + m_password + ";";
 		return m_ConnectionString;
 	}
 	SQLRETURN DriverConnect() {
@@ -588,11 +637,14 @@ public:
 		std::string connctionstring = Get_ConnectionString();
 		SQLRETURN ret;
 		ret = SQLAllocHandle(SQL_HANDLE_ENV, SQL_NULL_HANDLE, &m_henv);
-		ret = SQLSetEnvAttr(m_henv, SQL_ATTR_ODBC_VERSION, (SQLPOINTER *)SQL_OV_ODBC3, 0);
+		ret = SQLSetEnvAttr(m_henv, SQL_ATTR_ODBC_VERSION,
+							(SQLPOINTER *)SQL_OV_ODBC3, 0);
 		ret = SQLAllocHandle(SQL_HANDLE_DBC, m_henv, &m_hdbc);
 		// Set login timeout to 10 seconds
 		ret = SQLSetConnectAttr(m_hdbc, SQL_LOGIN_TIMEOUT, (SQLPOINTER)10, 0);
-		ret = SQLDriverConnect(m_hdbc, NULL, (SQLCHAR *)connctionstring.c_str(), SQL_NTS, outstr, sizeof(outstr), &outstrlen, SQL_DRIVER_NOPROMPT);
+		ret = SQLDriverConnect(m_hdbc, NULL, (SQLCHAR *)connctionstring.c_str(),
+							   SQL_NTS, outstr, sizeof(outstr), &outstrlen,
+							   SQL_DRIVER_NOPROMPT);
 		if ((ret == SQL_SUCCESS) || (ret == SQL_SUCCESS_WITH_INFO)) {
 			m_Connect = ret;
 		} else {
@@ -601,17 +653,29 @@ public:
 		return ret;
 	}
 	SQLRETURN Disconnect() { return SQLDisconnect(m_hdbc); }
-	SQLRETURN Get_ConnectAttr(SQLINTEGER Attribute, SQLPOINTER ValuePtr, SQLINTEGER BufferLength, SQLINTEGER *StringLengthPtr) { return SQLGetConnectAttr(m_hdbc, Attribute, ValuePtr, BufferLength, StringLengthPtr); }
+	SQLRETURN Get_ConnectAttr(SQLINTEGER Attribute, SQLPOINTER ValuePtr,
+							  SQLINTEGER BufferLength,
+							  SQLINTEGER *StringLengthPtr) {
+		return SQLGetConnectAttr(m_hdbc, Attribute, ValuePtr, BufferLength,
+								 StringLengthPtr);
+	}
 	SQLHENV Get_EnvironmentHandle() { return m_henv; }
 	SQLHDBC Get_ConnectionHandle() { return m_hdbc; }
 	SQLRETURN SetCommitMode(unsigned long *val) {
 		if (*val == SQL_AUTOCOMMIT_OFF || *val == SQL_AUTOCOMMIT_ON) {
-			return SQLSetConnectAttr(m_hdbc, SQL_ATTR_AUTOCOMMIT, (SQLPOINTER)val, 0);
+			return SQLSetConnectAttr(m_hdbc, SQL_ATTR_AUTOCOMMIT,
+									 (SQLPOINTER)val, 0);
 		}
 		return SQL_ERROR;
 	}
-	SQLRETURN SetAutoCommitModeOn() { return SQLSetConnectAttr(m_hdbc, SQL_ATTR_AUTOCOMMIT, (SQLPOINTER)SQL_AUTOCOMMIT_ON, 0); }
-	SQLRETURN SetAutoCommitModeOff() { return SQLSetConnectAttr(m_hdbc, SQL_ATTR_AUTOCOMMIT, (SQLPOINTER)SQL_AUTOCOMMIT_OFF, 0); }
+	SQLRETURN SetAutoCommitModeOn() {
+		return SQLSetConnectAttr(m_hdbc, SQL_ATTR_AUTOCOMMIT,
+								 (SQLPOINTER)SQL_AUTOCOMMIT_ON, 0);
+	}
+	SQLRETURN SetAutoCommitModeOff() {
+		return SQLSetConnectAttr(m_hdbc, SQL_ATTR_AUTOCOMMIT,
+								 (SQLPOINTER)SQL_AUTOCOMMIT_OFF, 0);
+	}
 	// SQL_HANDLE_DBC
 	/*
 	SQLRETURN SQLGetConnectAttr(
@@ -621,15 +685,24 @@ public:
 	 SQLINTEGER     BufferLength,
 	 SQLINTEGER *   StringLengthPtr);
 	*/
-	SQLRETURN GetConnectAttr(SQLINTEGER Attribute, SQLPOINTER ValuePtr, SQLINTEGER BufferLength, SQLINTEGER *StringLengthPtr) { return SQLGetConnectAttr(m_hdbc, Attribute, ValuePtr, BufferLength, StringLengthPtr); }
+	SQLRETURN GetConnectAttr(SQLINTEGER Attribute, SQLPOINTER ValuePtr,
+							 SQLINTEGER BufferLength,
+							 SQLINTEGER *StringLengthPtr) {
+		return SQLGetConnectAttr(m_hdbc, Attribute, ValuePtr, BufferLength,
+								 StringLengthPtr);
+	}
 	SQLRETURN EndTran(SQLSMALLINT CompletionType) {
 		if (CompletionType == SQL_COMMIT || CompletionType == SQL_ROLLBACK) {
 			return SQLEndTran(SQL_HANDLE_DBC, m_hdbc, CompletionType);
 		}
 		return SQL_ERROR;
 	}
-	SQLRETURN EndTranCommit() { return SQLEndTran(SQL_HANDLE_DBC, m_hdbc, SQL_COMMIT); }
-	SQLRETURN EndTranRollback() { return SQLEndTran(SQL_HANDLE_DBC, m_hdbc, SQL_ROLLBACK); }
+	SQLRETURN EndTranCommit() {
+		return SQLEndTran(SQL_HANDLE_DBC, m_hdbc, SQL_COMMIT);
+	}
+	SQLRETURN EndTranRollback() {
+		return SQLEndTran(SQL_HANDLE_DBC, m_hdbc, SQL_ROLLBACK);
+	}
 };
 
 class COdbcCommand {
@@ -647,17 +720,30 @@ public:
 			m_hstmt = SQL_NULL_HSTMT;
 		}
 	}
-	SQLRETURN Set_CursorName(std::string CursorName) { return SQLSetCursorName(m_hstmt, (SQLCHAR *)CursorName.c_str(), SQL_NTS); }
-	SQLRETURN BindCol(SQLHSTMT StatementHandle, SQLUSMALLINT ColumnNumber, SQLSMALLINT TargetType, SQLPOINTER TargetValue, SQLLEN BufferLength, SQLLEN *StrLen_or_Ind) {
-		return SQLBindCol(StatementHandle, ColumnNumber, TargetType, TargetValue, BufferLength, StrLen_or_Ind);
+	SQLRETURN Set_CursorName(std::string CursorName) {
+		return SQLSetCursorName(m_hstmt, (SQLCHAR *)CursorName.c_str(),
+								SQL_NTS);
 	}
-	SQLRETURN mSQLBindParameter(SQLUSMALLINT ipar, SQLSMALLINT fParamType, SQLSMALLINT fCType, SQLSMALLINT fSqlType, SQLULEN cbColDef, SQLSMALLINT ibScale, SQLPOINTER rgbValue, SQLLEN cbValueMax, SQLLEN *pcbValue) {
-		return SQLBindParameter(m_hstmt, ipar, fParamType, fCType, fSqlType, cbColDef, ibScale, rgbValue, cbValueMax, pcbValue);
+	SQLRETURN BindCol(SQLHSTMT StatementHandle, SQLUSMALLINT ColumnNumber,
+					  SQLSMALLINT TargetType, SQLPOINTER TargetValue,
+					  SQLLEN BufferLength, SQLLEN *StrLen_or_Ind) {
+		return SQLBindCol(StatementHandle, ColumnNumber, TargetType,
+						  TargetValue, BufferLength, StrLen_or_Ind);
+	}
+	SQLRETURN mSQLBindParameter(SQLUSMALLINT ipar, SQLSMALLINT fParamType,
+								SQLSMALLINT fCType, SQLSMALLINT fSqlType,
+								SQLULEN cbColDef, SQLSMALLINT ibScale,
+								SQLPOINTER rgbValue, SQLLEN cbValueMax,
+								SQLLEN *pcbValue) {
+		return SQLBindParameter(m_hstmt, ipar, fParamType, fCType, fSqlType,
+								cbColDef, ibScale, rgbValue, cbValueMax,
+								pcbValue);
 	}
 
 	SQLRETURN mSQLExecDirect() {
 		SQLRETURN ret;
-		ret = SQLExecDirect(m_hstmt, (SQLCHAR *)m_CommandString.c_str(), SQL_NTS);
+		ret =
+			SQLExecDirect(m_hstmt, (SQLCHAR *)m_CommandString.c_str(), SQL_NTS);
 		return ret;
 	}
 	SQLRETURN mSQLExecDirect(std::string command) {
@@ -666,7 +752,8 @@ public:
 	}
 	SQLRETURN mSQLPrepare() {
 		SQLINTEGER length = (SQLINTEGER)m_CommandString.length();
-		SQLRETURN ret = SQLPrepare(m_hstmt, (SQLCHAR *)m_CommandString.c_str(), length);
+		SQLRETURN ret =
+			SQLPrepare(m_hstmt, (SQLCHAR *)m_CommandString.c_str(), length);
 		return ret;
 	}
 	SQLRETURN mFetch() { return SQLFetch(m_hstmt); }
@@ -674,18 +761,33 @@ public:
 		m_hstmt = hstmt;
 		return mFetch();
 	}
-	SQLRETURN SQL_API BindCol(SQLUSMALLINT ColumnNumber, SQLSMALLINT TargetType, SQLPOINTER TargetValue, SQLLEN BufferLength, SQLLEN *StrLen_or_Ind) { return SQLBindCol(m_hstmt, ColumnNumber, TargetType, TargetValue, BufferLength, StrLen_or_Ind); }
-	SQLRETURN GetData(SQLUSMALLINT Col_or_Param_Num, SQLSMALLINT TargetType, SQLPOINTER TargetValuePtr, SQLLEN BufferLength, SQLLEN *StrLen_or_IndPtr) {
-		return SQLGetData(m_hstmt, Col_or_Param_Num, TargetType, TargetValuePtr, BufferLength, StrLen_or_IndPtr);
+	SQLRETURN SQL_API BindCol(SQLUSMALLINT ColumnNumber, SQLSMALLINT TargetType,
+							  SQLPOINTER TargetValue, SQLLEN BufferLength,
+							  SQLLEN *StrLen_or_Ind) {
+		return SQLBindCol(m_hstmt, ColumnNumber, TargetType, TargetValue,
+						  BufferLength, StrLen_or_Ind);
 	}
-	SQLRETURN GetData(SQLHSTMT StatementHandle, SQLUSMALLINT Col_or_Param_Num, SQLSMALLINT TargetType, SQLPOINTER TargetValuePtr, SQLLEN BufferLength, SQLLEN *StrLen_or_IndPtr) {
+	SQLRETURN GetData(SQLUSMALLINT Col_or_Param_Num, SQLSMALLINT TargetType,
+					  SQLPOINTER TargetValuePtr, SQLLEN BufferLength,
+					  SQLLEN *StrLen_or_IndPtr) {
+		return SQLGetData(m_hstmt, Col_or_Param_Num, TargetType, TargetValuePtr,
+						  BufferLength, StrLen_or_IndPtr);
+	}
+	SQLRETURN GetData(SQLHSTMT StatementHandle, SQLUSMALLINT Col_or_Param_Num,
+					  SQLSMALLINT TargetType, SQLPOINTER TargetValuePtr,
+					  SQLLEN BufferLength, SQLLEN *StrLen_or_IndPtr) {
 		m_hstmt = StatementHandle;
-		return this->GetData(Col_or_Param_Num, TargetType, TargetValuePtr, BufferLength, StrLen_or_IndPtr);
+		return this->GetData(Col_or_Param_Num, TargetType, TargetValuePtr,
+							 BufferLength, StrLen_or_IndPtr);
 	}
 	SQLHSTMT GetStatementHandle() { return m_hstmt; }
 	std::string GetCommandString() { return m_CommandString; }
-	void SetCommandString(std::string CommandString) { m_CommandString = CommandString; }
-	SQLRETURN BindParameterBinary(SQLUSMALLINT ipar, SQLSMALLINT fParamType, SQLULEN cbColDef, SQLSMALLINT ibScale, SQLPOINTER rgbValue, SQLLEN *pcbValue) {
+	void SetCommandString(std::string CommandString) {
+		m_CommandString = CommandString;
+	}
+	SQLRETURN BindParameterBinary(SQLUSMALLINT ipar, SQLSMALLINT fParamType,
+								  SQLULEN cbColDef, SQLSMALLINT ibScale,
+								  SQLPOINTER rgbValue, SQLLEN *pcbValue) {
 		std::stringstream ss;
 		SQLCHAR *val = (SQLCHAR *)rgbValue;
 		for (SQLULEN i = 0; i < cbColDef; i++) {
@@ -696,11 +798,14 @@ public:
 		char *valchar = new char[cbValueMax];
 		memset(valchar, 0, cbValueMax);
 		sprintf(valchar, "%s", valstring.c_str());
-		SQLRETURN ret = mSQLBindParameter(ipar, fParamType, SQL_C_CHAR, SQL_CHAR, cbColDef, ibScale, rgbValue, cbValueMax, pcbValue);
+		SQLRETURN ret =
+			mSQLBindParameter(ipar, fParamType, SQL_C_CHAR, SQL_CHAR, cbColDef,
+							  ibScale, rgbValue, cbValueMax, pcbValue);
 		delete[] valchar;
 		return ret;
 	}
-	SQLRETURN BindParameterDateTime(SQLUSMALLINT ipar, SQLSMALLINT fParamType, SQLPOINTER rgbValue, SQLLEN *pcbValue) {
+	SQLRETURN BindParameterDateTime(SQLUSMALLINT ipar, SQLSMALLINT fParamType,
+									SQLPOINTER rgbValue, SQLLEN *pcbValue) {
 		SQLRETURN ret;
 		SQL_TIMESTAMP_STRUCT *date = (SQL_TIMESTAMP_STRUCT *)rgbValue;
 		std::string datestring = COdbcDateTime::to_string(date, '-', true);
@@ -708,7 +813,9 @@ public:
 		char *datechar = new char[cbValueMax];
 		memset(datechar, 0, cbValueMax);
 		sprintf(datechar, "%s", datestring.c_str());
-		ret = this->mSQLBindParameter(ipar, SQL_PARAM_INPUT, SQL_C_CHAR, SQL_CHAR, cbValueMax, 0, datechar, cbValueMax, pcbValue);
+		ret = this->mSQLBindParameter(ipar, SQL_PARAM_INPUT, SQL_C_CHAR,
+									  SQL_CHAR, cbValueMax, 0, datechar,
+									  cbValueMax, pcbValue);
 		delete[] datechar;
 		return ret;
 	}
@@ -726,20 +833,41 @@ private:
 };
 class COdbcColumn {
 public:
-	COdbcColumn() { mType = eSqlType::_unknown; }
-	COdbcColumn(std::string table_catalog, std::string table_schema, std::string table_name, std::string column_name, std::string ordinal_position, std::string column_default, std::string is_nullable, std::string data_type,
-				std::string character_maximum_length, std::string character_octet_length, std::string numeric_precision, std::string numeric_scale, std::string datetime_precision, std::string character_set_name, std::string collation_name,
-				eSqlType type = _unknown) {
-		SetValue(table_catalog, table_schema, table_name, column_name, ordinal_position, column_default, is_nullable, data_type, character_maximum_length, character_octet_length, numeric_precision, numeric_scale, datetime_precision, character_set_name,
-				 collation_name, type);
+	COdbcColumn() {
+		isIdentity = 0;
+		mType = eSqlType::_unknown;
+		m_KeyF = -1;
+	}
+	COdbcColumn(std::string table_catalog, std::string table_schema,
+				std::string table_name, std::string column_name,
+				std::string ordinal_position, std::string column_default,
+				std::string is_nullable, std::string data_type,
+				std::string character_maximum_length,
+				std::string character_octet_length,
+				std::string numeric_precision, std::string numeric_scale,
+				std::string datetime_precision, std::string character_set_name,
+				std::string collation_name, int isIdentity,
+				eSqlType type = _unknown, int keyflg = -1) {
+		SetValue(table_catalog, table_schema, table_name, column_name,
+				 ordinal_position, column_default, is_nullable, data_type,
+				 character_maximum_length, character_octet_length,
+				 numeric_precision, numeric_scale, datetime_precision,
+				 character_set_name, collation_name, isIdentity, type, keyflg);
 	}
 
 	~COdbcColumn() {}
 
 public:
-	void SetValue(std::string table_catalog, std::string table_schema, std::string table_name, std::string column_name, std::string ordinal_position, std::string column_default, std::string is_nullable, std::string data_type,
-				  std::string character_maximum_length, std::string character_octet_length, std::string numeric_precision, std::string numeric_scale, std::string datetime_precision, std::string character_set_name, std::string collation_name,
-				  eSqlType type = _unknown) {
+	void SetValue(std::string table_catalog, std::string table_schema,
+				  std::string table_name, std::string column_name,
+				  std::string ordinal_position, std::string column_default,
+				  std::string is_nullable, std::string data_type,
+				  std::string character_maximum_length,
+				  std::string character_octet_length,
+				  std::string numeric_precision, std::string numeric_scale,
+				  std::string datetime_precision,
+				  std::string character_set_name, std::string collation_name,
+				  int isIdentity, eSqlType type = _unknown, int keyflg = -1) {
 		this->table_catalog = table_catalog;
 		this->table_schema = table_schema;
 		this->table_name = table_name;
@@ -755,7 +883,9 @@ public:
 		this->datetime_precision = datetime_precision;
 		this->character_set_name = character_set_name;
 		this->collation_name = collation_name;
+		this->isIdentity = isIdentity;
 		this->mType = type;
+		this->m_KeyF = keyflg;
 	}
 	static void SQLNumericConv(SQL_NUMERIC_STRUCT *pv, double val) {
 		double dwk0 = val;
@@ -927,6 +1057,8 @@ public:
 		sprintf(buf, "%Lf", wk);
 		return buf;
 	}
+	int IsKey() { return m_KeyF; }
+	void SetIsKey(int value) { m_KeyF = value; }
 
 public:
 	std::string table_catalog;
@@ -944,12 +1076,34 @@ public:
 	std::string datetime_precision;
 	std::string character_set_name;
 	std::string collation_name;
+	int isIdentity;
 	eSqlType mType;
-};
 
+private:
+	int m_KeyF;
+};
+class COdbcKeyColumn {
+public:
+	COdbcKeyColumn() {
+		KEY_CONSTRAINT_NAME = "";
+		KEY_COLUMN_NAME = "";
+		KEY_ORDINAL_POSITION = -1;
+	}
+	virtual ~COdbcKeyColumn() {}
+	void Set_Value(std::string keyname, std::string columnname, int position) {
+		KEY_CONSTRAINT_NAME = keyname;
+		KEY_COLUMN_NAME = columnname;
+		KEY_ORDINAL_POSITION = position;
+	}
+
+public:
+	std::string KEY_CONSTRAINT_NAME;
+	std::string KEY_COLUMN_NAME;
+	int KEY_ORDINAL_POSITION;
+};
 class COdbcRecord {
 public:
-	COdbcRecord() { 
+	COdbcRecord() {
 		m_Modify = _NoModify;
 		m_newF = false;
 	}
@@ -958,15 +1112,16 @@ public:
 	void set_Modify(eRecordModify value) { m_Modify = value; }
 	bool get_Flg() { return m_newF; }
 	void set_Flg(bool value) { m_newF = value; }
-protected:
+
 	eRecordModify m_Modify;
+
 private:
 	bool m_newF;
 };
 
 class COdbcTable {
 public:
-	COdbcTable() { 
+	COdbcTable() {
 		m_Count = 0;
 		m_TableName = "";
 	}
@@ -979,7 +1134,9 @@ protected:
 	std::string m_SqlUPDATE;
 	std::string m_SqlDELETE;
 	std::vector<COdbcColumn> m_Column;
+	std::vector<COdbcKeyColumn> m_Key;
 	std::string m_TableName;
+
 public:
 	std::string Get_SELECT() { return m_SqlSELECT; }
 	std::string Get_INSERT() { return m_SqlINSERT; }
@@ -988,7 +1145,8 @@ public:
 	std::string Get_Name() { return m_TableName; }
 	COdbcColumn Column(int i) { return m_Column.at(i); }
 	int ColumnCount() { return m_Column.size(); }
-
+	COdbcKeyColumn Key(int i) { return m_Key.at(i); }
+	size_t KeyCount() { return m_Key.size(); }
 	std::string UpdateSet(SQLPOINTER pval, COdbcColumn *col) {
 		string ret = col->column_name + "=";
 		std::stringstream ss;
@@ -1065,5 +1223,5 @@ public:
 		return ret;
 	}
 };
-}
+} // namespace OdbcCommon
 #endif // ODBCCOMMON_HPP_INCLUDED
