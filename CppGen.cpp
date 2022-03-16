@@ -172,6 +172,7 @@ int CppGen::Execute() {
 		consys.Disconnect();
 		WriteRecInitialize(outf, tbl);
 		WriteRecordData(outf, tbl);
+		WriteRecordOperator(outf, tbl);
 		*outf << "};" << NL;
 		/*
 			Table Class
@@ -203,7 +204,8 @@ int CppGen::Execute() {
 	}
 	return SQL_SUCCESS;
 }
-void CppGen::WriteWherePrimaryKey(ofstream *outf, std::string &Recordclassname) {
+void CppGen::WriteWherePrimaryKey(ofstream *outf,
+								  std::string &Recordclassname) {
 	*outf << Tab << "std::string WherePrimaryKey(" << Recordclassname
 		  << " &rec) {" << NL;
 	*outf << Tab << Tab << "std::string sql = \"\";" << NL;
@@ -214,7 +216,8 @@ void CppGen::WriteWherePrimaryKey(ofstream *outf, std::string &Recordclassname) 
 		  << "int pos = this->Key(j).KEY_ORDINAL_POSITION - 1;" << NL;
 	*outf << Tab << Tab << Tab
 		  << "sql = sql + this->Key(j).KEY_COLUMN_NAME + \" = '\" + rec[pos] + "
-			 "\"'\";" << NL;
+			 "\"'\";"
+		  << NL;
 	*outf << Tab << Tab << "}" << NL;
 	*outf << Tab << Tab << "return sql;" << NL;
 	*outf << Tab << "}" << NL;
@@ -444,17 +447,52 @@ void CppGen::WriteRecordData(ofstream *outf,
 			if (wklen < 0) wklen = MAXBUF;
 			if (wklen > MAXBUF)
 				len = MAXBUF;
-			else
+			else {
 				len = wklen;
-			*outf << Tab << "SQLCHAR" << Tab << rec.COLUMN_NAME << "[" << len
-				  << "];" << NL;
-			break;
-		}
+				*outf << Tab << "SQLCHAR" << Tab << rec.COLUMN_NAME << "["
+					  << len << "];" << NL;
+			}
+		} break;
 		default:
 			break;
 		}
 		cnt++;
 	}
+}
+void CppGen::WriteRecordOperator(ofstream *outf,
+								 CT_INFORMATION_SCHEMA_COLUMNS *tbl) {
+	*outf << Tab << "std::string operator[](int i) {" << NL;
+	*outf << Tab << Tab << "std::string ret = \"\";" << NL;
+	*outf << Tab << Tab << "std::stringstream ss;" << NL;
+	*outf << Tab << Tab << "switch(i) {" << NL;
+	for (int i = 0; i < tbl->m_Data.size(); i++) {
+		*outf << Tab << Tab << "case " << i << ": {";
+		switch (tbl->m_Data[i].sqltype) {
+		case _date:
+		case _time:
+		case _datetime:
+		case _datetime2:
+		case _smalldatetime:
+		case _datetimeoffset: {
+			*outf << Tab << Tab << Tab << "COdbcDateTime date(&this->"
+				  << tbl->m_Data[i].COLUMN_NAME << ");" << NL;
+			*outf << Tab << Tab << Tab << "ss << date.to_string();" << NL;
+			*outf << Tab << Tab << "} break;" << NL;
+		} break;
+
+		default: {
+			*outf << Tab << Tab << Tab << "ss << this->"
+				  << tbl->m_Data[i].COLUMN_NAME << ";" << NL;
+			*outf << Tab << Tab << "} break;" << NL;
+		} break;
+		}
+	}
+	*outf << Tab << Tab << "defoult:" << NL;
+	*outf << Tab << Tab << Tab << "break;" << NL;
+	*outf << Tab << Tab << "}" << NL;
+	*outf << Tab << Tab << "ret = ss.str();" << NL;
+	*outf << Tab << Tab << "return ret;" << NL;
+	*outf << Tab << "}" << NL;
 }
 void CppGen::WriteTblConstructor(ofstream *outf, std::string &classname,
 								 CT_INFORMATION_SCHEMA_COLUMNS *tbl,
@@ -476,9 +514,9 @@ void CppGen::WriteTblConstructor(ofstream *outf, std::string &classname,
 				  << NL;
 			if (rec.mIdentity == 0) {
 				insrt << Tab << Tab << Tab << "\"" << rec.COLUMN_NAME;
-				if (FindKey(rec) == -1){
-					updat << Tab << Tab << Tab << "\"" << rec.COLUMN_NAME << " = ?\";"
-						<< NL;
+				if (FindKey(rec) == -1) {
+					updat << Tab << Tab << Tab << "\"" << rec.COLUMN_NAME
+						  << " = ?\";" << NL;
 				}
 			}
 			insrt << ")\"" << NL;
@@ -488,9 +526,9 @@ void CppGen::WriteTblConstructor(ofstream *outf, std::string &classname,
 			if (rec.mIdentity == 0) {
 				insrt << Tab << Tab << Tab << "\"" << rec.COLUMN_NAME << ",\""
 					  << NL;
-				if (FindKey(rec) == -1){
-					updat << Tab << Tab << Tab << "\"" << rec.COLUMN_NAME << " = ?\","
-						<< NL;
+				if (FindKey(rec) == -1) {
+					updat << Tab << Tab << Tab << "\"" << rec.COLUMN_NAME
+						  << " = ?,\"" << NL;
 				}
 			}
 		}
@@ -768,9 +806,9 @@ void CppGen::WriteSetTableData(ofstream *outf, std::string &recclassname,
 int CppGen::FindKey(CR_INFORMATION_SCHEMA_COLUMNS &rec) {
 	int ret = -1;
 	std::string COLUMN_NAME = (char *)rec.COLUMN_NAME;
-	for (int n = 0; n < m_Key.m_Data.size();n++){
+	for (int n = 0; n < m_Key.m_Data.size(); n++) {
 		std::string name = (char *)m_Key.m_Data[n].COLUMN_NAME;
-		if (COLUMN_NAME == name ) {
+		if (COLUMN_NAME == name) {
 			ret = n;
 			break;
 		}

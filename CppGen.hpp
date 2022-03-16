@@ -179,6 +179,7 @@ protected:
 	void WriteRecDestructor(ofstream *outf, std::string classname);
 	void WriteRecInitialize(ofstream *outf, CT_INFORMATION_SCHEMA_COLUMNS *tbl);
 	void WriteRecordData(ofstream *outf, CT_INFORMATION_SCHEMA_COLUMNS *tbl);
+	void WriteRecordOperator(ofstream *outf, CT_INFORMATION_SCHEMA_COLUMNS *tbl);
 	void WriteTblConstructor(ofstream *outf, std::string &classname,
 							 CT_INFORMATION_SCHEMA_COLUMNS *tbl,
 							 std::string &tblname);

@@ -24,11 +24,37 @@ public:
 	void Initialize() {
 		id = 0;
 		name = "";
+		memset(value, 0, 48);
 	}
 
 public:
 	SQLINTEGER id;
 	std::string name;
+	TIMESTAMP_STRUCT date;
+	SQLCHAR value[48];
+	std::string operator[](int i) {
+		std::string ret = "";
+		std::stringstream ss;
+		switch (i) {
+		case 0: {
+			ss << this->id;
+		} break;
+		case 1: {
+			ss << this->name;
+		} break;
+		case 2: {
+			COdbcDateTime date(&this->date);
+			ss << date.to_string();
+		} break;
+		case 3: {
+			ss << this->value;
+		} break;
+		defoult:
+			break;
+		}
+		ret = ss.str();
+		return ret;
+	}
 };
 class CT_t_testtable : public COdbcTable {
 public:
@@ -36,14 +62,20 @@ public:
 		m_TableName = "t_testtable";
 		m_SqlSELECT = "SELECT "
 					  "id,"
-					  "name"
+					  "name,"
+					  "date,"
+					  "value"
 					  " FROM t_testtable";
 		m_SqlINSERT = "INSERT INTO t_testtable ("
 					  "id,"
-					  "name)"
-					  " VALUES ( ?,?)";
+					  "name,"
+					  "date,"
+					  "value)"
+					  " VALUES ( ?,?,?,?)";
 		m_SqlUPDATE = "UPDATE t_testtable SET "
-					  "name = ?";
+					  "name = ?,"
+					  "date = ?,"
+					  "value = ?";
 
 		m_SqlDELETE = "DELETE t_testtable ";
 		COdbcColumn col;
@@ -53,6 +85,14 @@ public:
 		col.SetValue("testdb", "dbo", "t_testtable", "name", "2", "", "YES",
 					 "varchar", "50", "50", "0", "0", "0", "cp932",
 					 "Japanese_CI_AS", 0, _varchar, -1);
+		m_Column.push_back(col);
+		col.SetValue("testdb", "dbo", "t_testtable", "date", "3", "", "YES",
+					 "datetime", "0", "0", "0", "0", "3", "", "", 0, _datetime,
+					 -1);
+		m_Column.push_back(col);
+		col.SetValue("testdb", "dbo", "t_testtable", "value", "4", "", "YES",
+					 "decimal", "0", "0", "32", "0", "0", "", "", 0, _decimal,
+					 -1);
 		m_Column.push_back(col);
 		m_Key.clear();
 		COdbcKeyColumn key;
@@ -77,6 +117,9 @@ public:
 				memset(name, 0, 51);
 				com->GetData(2, SQL_C_CHAR, name, 51, 0);
 				rec.name = (char *)name;
+				com->GetData(3, SQL_C_TYPE_TIMESTAMP, &rec.date,
+							 sizeof(rec.date), 0);
+				com->GetData(4, SQL_C_CHAR, &rec.value, sizeof(rec.value), 0);
 				m_Data.push_back(rec);
 				Count++;
 			} else
@@ -129,6 +172,24 @@ public:
 	SQLCHAR autoid[48];
 	std::string name_id;
 	std::string name_value;
+	std::string operator[](int i) {
+		std::string ret = "";
+		std::stringstream ss;
+		switch (i) {
+		case 0: {
+			ss << this->autoid;
+		} break;
+		case 1: {
+			ss << this->name_id;
+		} break;
+		case 2: {
+			ss << this->name_value;
+		} break;
+		defoult:
+			break;
+		}
+		return ret;
+	}
 };
 class CT_t_named : public COdbcTable {
 public:

@@ -538,14 +538,15 @@ protected:
 	TIMESTAMP_STRUCT data;
 };
 
+
 class COdbcParameter {
 public:
-	COdbcParameter() {
+	COdbcParameter() { 
 		position = -1;
 		name = "";
 		value = "";
 	}
-	virtual ~COdbcParameter() {}
+	virtual ~COdbcParameter(){}
 	int position;
 	std::string name;
 	std::string value;
