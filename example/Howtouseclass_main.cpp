@@ -1,8 +1,7 @@
 #include "testdb.hpp"
 using namespace OdbcCommon;
 int main(int argc, char *argv[]) {
-	COdbcConnection con("ODBC Driver 17 for SQL Server", "192.168.1.16",
-						"testuser", "010101", "testdb");
+	COdbcConnection con("ODBC Driver 17 for SQL Server", "192.168.1.16", "testuser", "010101", "testdb");
 	// con.Set_Driver("ODBC Driver 17 for SQL Server");
 	// con.Set_Server("192.168.1.16");
 	// con.Set_UserID("testuser");
@@ -21,8 +20,7 @@ int main(int argc, char *argv[]) {
 	for (int i = 0; i < tbl.ColumnCount(); i++) {
 		COdbcColumn column = tbl.Column(i);
 		ss << column.column_name;
-		if (i != (tbl.ColumnCount() - 1))
-			ss << ", ";
+		if (i != (tbl.ColumnCount() - 1)) ss << ", ";
 	}
 	ss << " FROM " << tbl.Get_Name();
 	sql = ss.str();

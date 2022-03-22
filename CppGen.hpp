@@ -76,31 +76,21 @@ public:
 	virtual ~CT_INFORMATION_SCHEMA_COLUMNS() {}
 	SQLRETURN Set_Data(COdbcCommand *com, CR_INFORMATION_SCHEMA_COLUMNS *rec) {
 		SQLRETURN ret;
-		ret =
-			com->GetData(1, SQL_C_CHAR, rec->TABLE_CATALOG, TABLE_CATALOGl, 0);
+		ret = com->GetData(1, SQL_C_CHAR, rec->TABLE_CATALOG, TABLE_CATALOGl, 0);
 		ret = com->GetData(2, SQL_C_CHAR, rec->TABLE_SCHEMA, TABLE_SCHEMAl, 0);
 		ret = com->GetData(3, SQL_C_CHAR, rec->TABLE_NAME, TABLE_NAMEl, 0);
 		ret = com->GetData(4, SQL_C_CHAR, rec->COLUMN_NAME, COLUMN_NAMEl, 0);
-		ret = com->GetData(5, SQL_C_LONG, &rec->ORDINAL_POSITION,
-						   ORDINAL_POSITIONl, 0);
-		ret = com->GetData(6, SQL_C_CHAR, rec->COLUMN_DEFAULT, COLUMN_DEFAULTl,
-						   0);
+		ret = com->GetData(5, SQL_C_LONG, &rec->ORDINAL_POSITION, ORDINAL_POSITIONl, 0);
+		ret = com->GetData(6, SQL_C_CHAR, rec->COLUMN_DEFAULT, COLUMN_DEFAULTl, 0);
 		ret = com->GetData(7, SQL_C_CHAR, rec->IS_NULLABLE, IS_NULLABLEl, 0);
 		ret = com->GetData(8, SQL_C_CHAR, rec->DATA_TYPE, DATA_TYPEl, 0);
-		ret = com->GetData(9, SQL_C_LONG, &rec->CHARACTER_MAXIMUM_LENGTH,
-						   CHARACTER_MAXIMUM_LENGTHl, 0);
-		ret = com->GetData(10, SQL_C_LONG, &rec->CHARACTER_OCTET_LENGTH,
-						   CHARACTER_OCTET_LENGTHl, 0);
-		ret = com->GetData(11, SQL_C_LONG, &rec->NUMERIC_PRECISION,
-						   NUMERIC_PRECISIONl, 0);
-		ret = com->GetData(12, SQL_C_LONG, &rec->NUMERIC_SCALE, NUMERIC_SCALEl,
-						   0);
-		ret = com->GetData(13, SQL_C_LONG, &rec->DATETIME_PRECISION,
-						   DATETIME_PRECISIONl, 0);
-		ret = com->GetData(14, SQL_C_CHAR, rec->CHARACTER_SET_NAME,
-						   CHARACTER_SET_NAMEl, 0);
-		ret = com->GetData(15, SQL_C_CHAR, rec->COLLATION_NAME, COLLATION_NAMEl,
-						   0);
+		ret = com->GetData(9, SQL_C_LONG, &rec->CHARACTER_MAXIMUM_LENGTH, CHARACTER_MAXIMUM_LENGTHl, 0);
+		ret = com->GetData(10, SQL_C_LONG, &rec->CHARACTER_OCTET_LENGTH, CHARACTER_OCTET_LENGTHl, 0);
+		ret = com->GetData(11, SQL_C_LONG, &rec->NUMERIC_PRECISION, NUMERIC_PRECISIONl, 0);
+		ret = com->GetData(12, SQL_C_LONG, &rec->NUMERIC_SCALE, NUMERIC_SCALEl, 0);
+		ret = com->GetData(13, SQL_C_LONG, &rec->DATETIME_PRECISION, DATETIME_PRECISIONl, 0);
+		ret = com->GetData(14, SQL_C_CHAR, rec->CHARACTER_SET_NAME, CHARACTER_SET_NAMEl, 0);
+		ret = com->GetData(15, SQL_C_CHAR, rec->COLLATION_NAME, COLLATION_NAMEl, 0);
 		return ret;
 	}
 
@@ -143,12 +133,11 @@ public:
 class CT_INFORMATION_SCHEMA_KEY_COLUMN_USAGE : public COdbcTable {
 public:
 	CT_INFORMATION_SCHEMA_KEY_COLUMN_USAGE() : COdbcTable() {
-		m_SqlSELECT =
-			"SELECT CONSTRAINT_NAME, TABLE_CATALOG, TABLE_SCHEMA, TABLE_NAME, "
-			"COLUMN_NAME, ORDINAL_POSITION FROM "
-			"INFORMATION_SCHEMA.KEY_COLUMN_USAGE ";
+		m_SqlSELECT = "SELECT CONSTRAINT_NAME, TABLE_CATALOG, TABLE_SCHEMA, TABLE_NAME, "
+					  "COLUMN_NAME, ORDINAL_POSITION FROM "
+					  "INFORMATION_SCHEMA.KEY_COLUMN_USAGE ";
 	}
-	virtual ~CT_INFORMATION_SCHEMA_KEY_COLUMN_USAGE(){}
+	virtual ~CT_INFORMATION_SCHEMA_KEY_COLUMN_USAGE() {}
 	SQLRETURN Set_Data(COdbcCommand *com, CR_INFORMATION_SCHEMA_KEY_COLUMN_USAGE *rec) {
 		SQLRETURN ret;
 		ret = com->GetData(1, SQL_C_CHAR, rec->CONSTRAINT_NAME, 256, 0);
@@ -159,14 +148,14 @@ public:
 		ret = com->GetData(6, SQL_C_LONG, &rec->ORDINAL_POSITION, 4, 0);
 		return ret;
 	}
+
 public:
 	std::vector<CR_INFORMATION_SCHEMA_KEY_COLUMN_USAGE> m_Data;
 };
 namespace fs = std::filesystem;
 class CppGen {
 public:
-	CppGen(std::string filename, std::string ConnectionString,
-		   OdbcCommon::COdbcConnection *pconnection,
+	CppGen(std::string filename, std::string ConnectionString, OdbcCommon::COdbcConnection *pconnection,
 		   bool UseClangFormat = false);
 	virtual ~CppGen();
 	int Execute();
@@ -174,19 +163,18 @@ public:
 protected:
 	void OdbcCommonWrite();
 	void HeaderWrite(ofstream *outfile);
-	void GetKeyColumnUsage(ofstream *ofile,COdbcConnection *con, std::string tablename);
+	void GetKeyColumnUsage(ofstream *ofile, COdbcConnection *con, std::string tablename);
 	void WriteRecConstructor(ofstream *outf, std::string classname);
 	void WriteRecDestructor(ofstream *outf, std::string classname);
 	void WriteRecInitialize(ofstream *outf, CT_INFORMATION_SCHEMA_COLUMNS *tbl);
 	void WriteRecordData(ofstream *outf, CT_INFORMATION_SCHEMA_COLUMNS *tbl);
 	void WriteRecordOperator(ofstream *outf, CT_INFORMATION_SCHEMA_COLUMNS *tbl);
-	void WriteTblConstructor(ofstream *outf, std::string &classname,
-							 CT_INFORMATION_SCHEMA_COLUMNS *tbl,
+	void WriteTblConstructor(ofstream *outf, std::string &classname, CT_INFORMATION_SCHEMA_COLUMNS *tbl,
 							 std::string &tblname);
 	void WriteTblDestructor(ofstream *outf, std::string &classname);
-	void WriteSetTableData(ofstream *outf, std::string &classname,
-						   CT_INFORMATION_SCHEMA_COLUMNS *tbl);
+	void WriteSetTableData(ofstream *outf, std::string &classname, CT_INFORMATION_SCHEMA_COLUMNS *tbl);
 	void WriteWherePrimaryKey(ofstream *outf, std::string &Recordclassname);
+	void WriteSynchronize(ofstream *outf, std::string &Recordclassname, CT_INFORMATION_SCHEMA_COLUMNS *tbl);
 	OdbcCommon::eSqlType TypeComparison(std::string &type);
 	std::string Get_C_Type(eSqlType typ);
 
@@ -201,15 +189,10 @@ private:
 	bool m_ClangFormat;
 	OdbcCommon::COdbcConnection *m_con;
 	CT_INFORMATION_SCHEMA_KEY_COLUMN_USAGE m_Key;
-	std::vector<string> m_Types = {
-		"bit",			 "tinyint",		   "smallint",
-		"int",			 "bigint",		   "decimal",
-		"numeric",		 "real",		   "float",
-		"smallmoney",	 "money",		   "date",
-		"time",			 "datetime",	   "datetime2",
-		"smalldatetime", "datetimeoffset", "char",
-		"varchar",		 "text",		   "nchar",
-		"nvarchar",		 "ntext",		   "binary",
-		"verbinary",	 "image",		   "xml"};
+	std::vector<string> m_Types = {"bit",		"tinyint",	"smallint",	 "int",			  "bigint",			"decimal",
+								   "numeric",	"real",		"float",	 "smallmoney",	  "money",			"date",
+								   "time",		"datetime", "datetime2", "smalldatetime", "datetimeoffset", "char",
+								   "varchar",	"text",		"nchar",	 "nvarchar",	  "ntext",			"binary",
+								   "verbinary", "image",	"xml"};
 };
 #endif

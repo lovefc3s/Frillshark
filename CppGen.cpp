@@ -12,8 +12,8 @@ CCharBuffer::CCharBuffer() {
 }
 CCharBuffer::~CCharBuffer() {}
 
-CppGen::CppGen(std::string filename, std::string ConnectionString,
-			   OdbcCommon::COdbcConnection *pconnection, bool UseClangFormat) {
+CppGen::CppGen(std::string filename, std::string ConnectionString, OdbcCommon::COdbcConnection *pconnection,
+			   bool UseClangFormat) {
 	m_filename = filename;
 	m_common = "";
 	m_ConnectionString = ConnectionString;
@@ -78,8 +78,7 @@ int CppGen::Execute() {
 		sql = sql + " WHERE TABLE_SCHEMA = '" + m_con->Get_Database() + "';";
 		break;
 	case 3:
-		sql = sql + " WHERE TABLE_SCHEMA = 'public' AND TABLE_CATALOG = '" +
-			  m_con->Get_Database() + "';";
+		sql = sql + " WHERE TABLE_SCHEMA = 'public' AND TABLE_CATALOG = '" + m_con->Get_Database() + "';";
 		break;
 	default:
 		return SQL_ERROR;
@@ -116,12 +115,10 @@ int CppGen::Execute() {
 			  "CHARACTER_SET_NAME, COLLATION_NAME "
 			  "FROM INFORMATION_SCHEMA.COLUMNS ";
 		if (mservertype == 2) {
-			sql = sql + " WHERE TABLE_SCHEMA = '" + m_con->Get_Database() +
-				  "' AND TABLE_NAME = '" + tblname +
+			sql = sql + " WHERE TABLE_SCHEMA = '" + m_con->Get_Database() + "' AND TABLE_NAME = '" + tblname +
 				  "' ORDER BY ORDINAL_POSITION;";
 		} else {
-			sql = sql + " WHERE TABLE_CATALOG = '" + m_con->Get_Database() +
-				  "' AND TABLE_NAME = '" + tblname +
+			sql = sql + " WHERE TABLE_CATALOG = '" + m_con->Get_Database() + "' AND TABLE_NAME = '" + tblname +
 				  "' ORDER BY ORDINAL_POSITION;";
 		}
 		string RecClassName = "CR_" + tblname;
@@ -130,8 +127,7 @@ int CppGen::Execute() {
 		*outf << "public:" << NL;
 		WriteRecConstructor(outf, RecClassName);
 		WriteRecDestructor(outf, RecClassName);
-		CT_INFORMATION_SCHEMA_COLUMNS *tbl =
-			new CT_INFORMATION_SCHEMA_COLUMNS();
+		CT_INFORMATION_SCHEMA_COLUMNS *tbl = new CT_INFORMATION_SCHEMA_COLUMNS();
 		ret = cm2->mSQLExecDirect(sql);
 		COdbcConnection consys;
 
@@ -153,14 +149,12 @@ int CppGen::Execute() {
 				if (mservertype == 1) {
 					string ident = "SELECT name,column_id,is_identity from "
 								   "sys.columns where object_Id = OBJECT_ID('" +
-								   tblname + "','U') and name = '" +
-								   (char *)rec.COLUMN_NAME + "'";
+								   tblname + "','U') and name = '" + (char *)rec.COLUMN_NAME + "'";
 					COdbcCommand csys(&consys);
 					ret = csys.mSQLExecDirect(ident);
 					if (ret == SQL_SUCCESS || ret == SQL_SUCCESS_WITH_INFO) {
 						ret = csys.mFetch();
-						if (ret == SQL_SUCCESS ||
-							ret == SQL_SUCCESS_WITH_INFO) {
+						if (ret == SQL_SUCCESS || ret == SQL_SUCCESS_WITH_INFO) {
 							csys.GetData(3, SQL_C_LONG, &rec.mIdentity, 4, 0);
 						}
 					}
@@ -187,6 +181,7 @@ int CppGen::Execute() {
 		*outf << Tab << Tab << "return m_Data.at(n);" << NL;
 		*outf << Tab << "}" << NL;
 		WriteWherePrimaryKey(outf, RecClassName);
+		WriteSynchronize(outf, RecClassName, tbl);
 		*outf << "public:" << NL;
 		*outf << Tab << "std::vector<" << RecClassName << "> m_Data;";
 		*outf << "};" << NL;
@@ -204,22 +199,22 @@ int CppGen::Execute() {
 	}
 	return SQL_SUCCESS;
 }
-void CppGen::WriteWherePrimaryKey(ofstream *outf,
-								  std::string &Recordclassname) {
-	*outf << Tab << "std::string WherePrimaryKey(" << Recordclassname
-		  << " &rec) {" << NL;
+void CppGen::WriteWherePrimaryKey(ofstream *outf, std::string &Recordclassname) {
+	*outf << Tab << "std::string WherePrimaryKey(" << Recordclassname << " &rec) {" << NL;
 	*outf << Tab << Tab << "std::string sql = \"\";" << NL;
 	*outf << Tab << Tab << "for (int j = 0; j < this->KeyCount(); j++) {" << NL;
 	*outf << Tab << Tab << Tab << "if (j == 0) sql = \" WHERE \";" << NL;
 	*outf << Tab << Tab << Tab << "else sql = sql + \" AND \";" << NL;
-	*outf << Tab << Tab << Tab
-		  << "int pos = this->Key(j).KEY_ORDINAL_POSITION - 1;" << NL;
+	*outf << Tab << Tab << Tab << "int pos = this->Key(j).KEY_ORDINAL_POSITION - 1;" << NL;
 	*outf << Tab << Tab << Tab
 		  << "sql = sql + this->Key(j).KEY_COLUMN_NAME + \" = '\" + rec[pos] + "
 			 "\"'\";"
 		  << NL;
 	*outf << Tab << Tab << "}" << NL;
 	*outf << Tab << Tab << "return sql;" << NL;
+	*outf << Tab << "}" << NL;
+	*outf << Tab << "std::string WherePrimaryKey (int i){" << NL;
+	*outf << Tab << Tab << "return WherePrimaryKey(this->m_Data[i]);" << NL;
 	*outf << Tab << "}" << NL;
 }
 void CppGen::OdbcCommonWrite() {
@@ -278,18 +273,14 @@ void CppGen::HeaderWrite(ofstream *ofile) {
 	*ofile << "#define __" << destination << "__" << NL;
 	*ofile << "#include \"" << m_common << "\"" << NL;
 }
-void CppGen::GetKeyColumnUsage(ofstream *ofile, COdbcConnection *con,
-							   std::string tablename) {
-	std::string strSql =
-		"SELECT CONSTRAINT_NAME, TABLE_CATALOG, TABLE_SCHEMA, TABLE_NAME, "
-		"COLUMN_NAME, ORDINAL_POSITION FROM "
-		"INFORMATION_SCHEMA.KEY_COLUMN_USAGE ";
+void CppGen::GetKeyColumnUsage(ofstream *ofile, COdbcConnection *con, std::string tablename) {
+	std::string strSql = "SELECT CONSTRAINT_NAME, TABLE_CATALOG, TABLE_SCHEMA, TABLE_NAME, "
+						 "COLUMN_NAME, ORDINAL_POSITION FROM "
+						 "INFORMATION_SCHEMA.KEY_COLUMN_USAGE ";
 	if (mservertype == 2) {
-		strSql = strSql + " WHERE TABLE_SCHEMA = '" + con->Get_Database() +
-				 "' AND TABLE_NAME = '" + tablename + "' ";
+		strSql = strSql + " WHERE TABLE_SCHEMA = '" + con->Get_Database() + "' AND TABLE_NAME = '" + tablename + "' ";
 	} else {
-		strSql = strSql + " WHERE TABLE_CATALOG = '" + con->Get_Database() +
-				 "' AND TABLE_NAME = '" + tablename + "' ";
+		strSql = strSql + " WHERE TABLE_CATALOG = '" + con->Get_Database() + "' AND TABLE_NAME = '" + tablename + "' ";
 	}
 	strSql = strSql + "  ORDER BY CONSTRAINT_NAME,ORDINAL_POSITION;";
 	m_Key.m_Data.clear();
@@ -317,8 +308,7 @@ void CppGen::WriteRecDestructor(ofstream *outf, std::string classname) {
 	*outf << Tab << "}" << NL;
 	*outf << NL;
 }
-void CppGen::WriteRecInitialize(ofstream *outf,
-								CT_INFORMATION_SCHEMA_COLUMNS *tbl) {
+void CppGen::WriteRecInitialize(ofstream *outf, CT_INFORMATION_SCHEMA_COLUMNS *tbl) {
 	*outf << Tab << "void Initialize() { " << NL;
 	for (int i = 0; i < tbl->m_Data.size(); i++) {
 		CR_INFORMATION_SCHEMA_COLUMNS rec = tbl->m_Data.at(i);
@@ -349,8 +339,7 @@ void CppGen::WriteRecInitialize(ofstream *outf,
 		case _numeric:
 		case _smallmoney:
 		case _money: {
-			*outf << Tab << Tab << "memset(" << rec.COLUMN_NAME << ",0,48);"
-				  << NL;
+			*outf << Tab << Tab << "memset(&" << rec.COLUMN_NAME << ",0,sizeof(" << rec.COLUMN_NAME << "));" << NL;
 			break;
 		}
 		case _char:
@@ -363,8 +352,7 @@ void CppGen::WriteRecInitialize(ofstream *outf,
 			break;
 		}
 		case _binary: {
-			*outf << Tab << Tab << "memset(" << rec.COLUMN_NAME << ",0,"
-				  << rec.CHARACTER_MAXIMUM_LENGTH << ");" << NL;
+			*outf << Tab << Tab << "memset(" << rec.COLUMN_NAME << ",0," << rec.CHARACTER_MAXIMUM_LENGTH << ");" << NL;
 			break;
 		}
 		default:
@@ -379,8 +367,7 @@ OdbcCommon::eSqlType CppGen::TypeComparison(std::string &type) {
 	}
 	return eSqlType::_unknown;
 }
-void CppGen::WriteRecordData(ofstream *outf,
-							 CT_INFORMATION_SCHEMA_COLUMNS *tbl) {
+void CppGen::WriteRecordData(ofstream *outf, CT_INFORMATION_SCHEMA_COLUMNS *tbl) {
 	int cnt = 0;
 	*outf << "public:" << NL;
 	for (int i = 0; i < tbl->m_Data.size(); i++) {
@@ -394,8 +381,7 @@ void CppGen::WriteRecordData(ofstream *outf,
 			break;
 		}
 		case _smallint: {
-			*outf << Tab << "SQLSMALLINT" << Tab << rec.COLUMN_NAME << ";"
-				  << NL;
+			*outf << Tab << "SQLSMALLINT" << Tab << rec.COLUMN_NAME << ";" << NL;
 			break;
 		}
 		case _int: {
@@ -411,8 +397,7 @@ void CppGen::WriteRecordData(ofstream *outf,
 		case _numeric:
 		case _smallmoney:
 		case _money: {
-			*outf << Tab << "SQLCHAR" << Tab << rec.COLUMN_NAME << "[48];"
-				  << NL;
+			*outf << Tab << "SQL_NUMERIC_STRUCT" << Tab << rec.COLUMN_NAME << ";" << NL;
 			break;
 		}
 		case _real:
@@ -426,8 +411,7 @@ void CppGen::WriteRecordData(ofstream *outf,
 		case _datetime2:
 		case _smalldatetime:
 		case _datetimeoffset: {
-			*outf << Tab << "TIMESTAMP_STRUCT" << Tab << rec.COLUMN_NAME << ";"
-				  << NL;
+			*outf << Tab << "TIMESTAMP_STRUCT" << Tab << rec.COLUMN_NAME << ";" << NL;
 			break;
 		}
 		case _char:
@@ -436,8 +420,7 @@ void CppGen::WriteRecordData(ofstream *outf,
 		case _nchar:
 		case _nvarchar:
 		case _ntext: {
-			*outf << Tab << "std::string" << Tab << rec.COLUMN_NAME << ";"
-				  << NL;
+			*outf << Tab << "std::string" << Tab << rec.COLUMN_NAME << ";" << NL;
 			break;
 		}
 		case _binary: {
@@ -449,8 +432,7 @@ void CppGen::WriteRecordData(ofstream *outf,
 				len = MAXBUF;
 			else {
 				len = wklen;
-				*outf << Tab << "SQLCHAR" << Tab << rec.COLUMN_NAME << "["
-					  << len << "];" << NL;
+				*outf << Tab << "SQLCHAR" << Tab << rec.COLUMN_NAME << "[" << len << "];" << NL;
 			}
 		} break;
 		default:
@@ -459,8 +441,7 @@ void CppGen::WriteRecordData(ofstream *outf,
 		cnt++;
 	}
 }
-void CppGen::WriteRecordOperator(ofstream *outf,
-								 CT_INFORMATION_SCHEMA_COLUMNS *tbl) {
+void CppGen::WriteRecordOperator(ofstream *outf, CT_INFORMATION_SCHEMA_COLUMNS *tbl) {
 	*outf << Tab << "std::string operator[](int i) {" << NL;
 	*outf << Tab << Tab << "std::string ret = \"\";" << NL;
 	*outf << Tab << Tab << "std::stringstream ss;" << NL;
@@ -468,21 +449,27 @@ void CppGen::WriteRecordOperator(ofstream *outf,
 	for (int i = 0; i < tbl->m_Data.size(); i++) {
 		*outf << Tab << Tab << "case " << i << ": {";
 		switch (tbl->m_Data[i].sqltype) {
+		case _decimal:
+		case _numeric:
+		case _smallmoney:
+		case _money: {
+			*outf << Tab << Tab << Tab << "ss << COdbcColumn::NumericToString(&this->" << tbl->m_Data[i].COLUMN_NAME
+				  << ");" << NL;
+			*outf << Tab << Tab << "} break;" << NL;
+		} break;
 		case _date:
 		case _time:
 		case _datetime:
 		case _datetime2:
 		case _smalldatetime:
 		case _datetimeoffset: {
-			*outf << Tab << Tab << Tab << "COdbcDateTime date(&this->"
-				  << tbl->m_Data[i].COLUMN_NAME << ");" << NL;
+			*outf << Tab << Tab << Tab << "COdbcDateTime date(&this->" << tbl->m_Data[i].COLUMN_NAME << ");" << NL;
 			*outf << Tab << Tab << Tab << "ss << date.to_string();" << NL;
 			*outf << Tab << Tab << "} break;" << NL;
 		} break;
 
 		default: {
-			*outf << Tab << Tab << Tab << "ss << this->"
-				  << tbl->m_Data[i].COLUMN_NAME << ";" << NL;
+			*outf << Tab << Tab << Tab << "ss << this->" << tbl->m_Data[i].COLUMN_NAME << ";" << NL;
 			*outf << Tab << Tab << "} break;" << NL;
 		} break;
 		}
@@ -494,41 +481,33 @@ void CppGen::WriteRecordOperator(ofstream *outf,
 	*outf << Tab << Tab << "return ret;" << NL;
 	*outf << Tab << "}" << NL;
 }
-void CppGen::WriteTblConstructor(ofstream *outf, std::string &classname,
-								 CT_INFORMATION_SCHEMA_COLUMNS *tbl,
+void CppGen::WriteTblConstructor(ofstream *outf, std::string &classname, CT_INFORMATION_SCHEMA_COLUMNS *tbl,
 								 std::string &tblname) {
 	*outf << Tab << classname << "():COdbcTable() { " << NL;
 	*outf << Tab << Tab << "m_TableName = \"" << tblname << "\";" << NL;
 	*outf << Tab << Tab << "m_SqlSELECT = \"SELECT \"" << NL;
 	std::stringstream insrt;
-	insrt << Tab << Tab << "m_SqlINSERT = \"INSERT INTO " << tblname << " (\""
-		  << NL;
+	insrt << Tab << Tab << "m_SqlINSERT = \"INSERT INTO " << tblname << " (\"" << NL;
 	std::stringstream updat;
-	updat << Tab << Tab << "m_SqlUPDATE = \"UPDATE " << tblname << " SET \""
-		  << NL;
+	updat << Tab << Tab << "m_SqlUPDATE = \"UPDATE " << tblname << " SET \"" << NL;
 	for (int i = 0; i < tbl->m_Data.size(); i++) {
 		CR_INFORMATION_SCHEMA_COLUMNS rec = tbl->m_Data.at(i);
 		if (i == (tbl->m_Data.size() - 1)) {
 			*outf << Tab << Tab << Tab << "\"" << rec.COLUMN_NAME << "\"" << NL;
-			*outf << Tab << Tab << Tab << "\" FROM " << rec.TABLE_NAME << "\";"
-				  << NL;
+			*outf << Tab << Tab << Tab << "\" FROM " << rec.TABLE_NAME << "\";" << NL;
 			if (rec.mIdentity == 0) {
 				insrt << Tab << Tab << Tab << "\"" << rec.COLUMN_NAME;
 				if (FindKey(rec) == -1) {
-					updat << Tab << Tab << Tab << "\"" << rec.COLUMN_NAME
-						  << " = ?\";" << NL;
+					updat << Tab << Tab << Tab << "\"" << rec.COLUMN_NAME << " = ?\";" << NL;
 				}
 			}
 			insrt << ")\"" << NL;
 		} else {
-			*outf << Tab << Tab << Tab << "\"" << rec.COLUMN_NAME << ",\""
-				  << NL;
+			*outf << Tab << Tab << Tab << "\"" << rec.COLUMN_NAME << ",\"" << NL;
 			if (rec.mIdentity == 0) {
-				insrt << Tab << Tab << Tab << "\"" << rec.COLUMN_NAME << ",\""
-					  << NL;
+				insrt << Tab << Tab << Tab << "\"" << rec.COLUMN_NAME << ",\"" << NL;
 				if (FindKey(rec) == -1) {
-					updat << Tab << Tab << Tab << "\"" << rec.COLUMN_NAME
-						  << " = ?,\"" << NL;
+					updat << Tab << Tab << Tab << "\"" << rec.COLUMN_NAME << " = ?,\"" << NL;
 				}
 			}
 		}
@@ -552,16 +531,12 @@ void CppGen::WriteTblConstructor(ofstream *outf, std::string &classname,
 	*outf << Tab << Tab << "COdbcColumn col;" << NL;
 	for (int j = 0; j < tbl->m_Data.size(); j++) {
 		CR_INFORMATION_SCHEMA_COLUMNS rec = tbl->m_Data.at(j);
-		*outf << Tab << Tab << "col.SetValue(\"" << rec.TABLE_CATALOG << "\",\""
-			  << rec.TABLE_SCHEMA << "\",\"" << rec.TABLE_NAME << "\",\""
-			  << rec.COLUMN_NAME << "\",\"" << rec.ORDINAL_POSITION << "\",\""
-			  << rec.COLUMN_DEFAULT << "\",\"" << rec.IS_NULLABLE << "\",\""
-			  << rec.DATA_TYPE << "\",\"" << rec.CHARACTER_MAXIMUM_LENGTH
-			  << "\",\"" << rec.CHARACTER_OCTET_LENGTH << "\",\""
-			  << rec.NUMERIC_PRECISION << "\",\"" << rec.NUMERIC_SCALE
-			  << "\",\"" << rec.DATETIME_PRECISION << "\",\""
-			  << rec.CHARACTER_SET_NAME << "\",\"" << rec.COLLATION_NAME
-			  << "\"," << rec.mIdentity << ",";
+		*outf << Tab << Tab << "col.SetValue(\"" << rec.TABLE_CATALOG << "\",\"" << rec.TABLE_SCHEMA << "\",\""
+			  << rec.TABLE_NAME << "\",\"" << rec.COLUMN_NAME << "\",\"" << rec.ORDINAL_POSITION << "\",\""
+			  << rec.COLUMN_DEFAULT << "\",\"" << rec.IS_NULLABLE << "\",\"" << rec.DATA_TYPE << "\",\""
+			  << rec.CHARACTER_MAXIMUM_LENGTH << "\",\"" << rec.CHARACTER_OCTET_LENGTH << "\",\""
+			  << rec.NUMERIC_PRECISION << "\",\"" << rec.NUMERIC_SCALE << "\",\"" << rec.DATETIME_PRECISION << "\",\""
+			  << rec.CHARACTER_SET_NAME << "\",\"" << rec.COLLATION_NAME << "\"," << rec.mIdentity << ",";
 		string stype = "";
 		switch (rec.sqltype) {
 		case _unknown:
@@ -651,9 +626,8 @@ void CppGen::WriteTblConstructor(ofstream *outf, std::string &classname,
 	*outf << Tab << Tab << "COdbcKeyColumn key;" << NL;
 	for (int i = 0; i < m_Key.m_Data.size(); i++) {
 		CR_INFORMATION_SCHEMA_KEY_COLUMN_USAGE rec = m_Key.m_Data.at(i);
-		*outf << Tab << Tab << "key.Set_Value(\"" << rec.CONSTRAINT_NAME
-			  << "\",\"" << rec.COLUMN_NAME << "\"," << rec.ORDINAL_POSITION
-			  << ");" << NL;
+		*outf << Tab << Tab << "key.Set_Value(\"" << rec.CONSTRAINT_NAME << "\",\"" << rec.COLUMN_NAME << "\","
+			  << rec.ORDINAL_POSITION << ");" << NL;
 		*outf << Tab << Tab << "m_Key.push_back(key);" << NL;
 	}
 	*outf << Tab << "}" << NL;
@@ -666,8 +640,7 @@ void CppGen::WriteTblDestructor(ofstream *outf, std::string &classname) {
 	*outf << NL;
 }
 
-void CppGen::WriteSetTableData(ofstream *outf, std::string &recclassname,
-							   CT_INFORMATION_SCHEMA_COLUMNS *tbl) {
+void CppGen::WriteSetTableData(ofstream *outf, std::string &recclassname, CT_INFORMATION_SCHEMA_COLUMNS *tbl) {
 	std::vector<CCharBuffer> bufnames;
 	*outf << "public:" << NL;
 	*outf << Tab << "SQLLEN Set_TableData(COdbcCommand *com) {" << NL;
@@ -675,10 +648,7 @@ void CppGen::WriteSetTableData(ofstream *outf, std::string &recclassname,
 	*outf << Tab << Tab << "SQLLEN Count = 0;" << NL;
 	*outf << Tab << Tab << "this->m_Data.clear();" << NL;
 	*outf << Tab << Tab << "ret = com->mSQLExecDirect();" << NL;
-	*outf
-		<< Tab << Tab
-		<< "if (ret != SQL_SUCCESS && ret != SQL_SUCCESS_WITH_INFO) return -1;"
-		<< NL;
+	*outf << Tab << Tab << "if (ret != SQL_SUCCESS && ret != SQL_SUCCESS_WITH_INFO) return -1;" << NL;
 	for (int j = 0; j < tbl->m_Data.size(); j++) {
 		CR_INFORMATION_SCHEMA_COLUMNS rec = tbl->m_Data.at(j);
 		CR_INFORMATION_SCHEMA_COLUMNS org = tbl->m_Data.at(j);
@@ -689,18 +659,21 @@ void CppGen::WriteSetTableData(ofstream *outf, std::string &recclassname,
 		case _smallint:
 		case _int:
 		case _bigint:
-		case _decimal:
-		case _numeric:
 		case _real:
 		case _float:
-		case _smallmoney:
-		case _money:
 		case _date:
 		case _time:
 		case _datetime:
 		case _datetime2:
 		case _smalldatetime:
 		case _datetimeoffset: {
+			rec.mLength = 49;
+		} break;
+		case _decimal:
+		case _numeric:
+		case _smallmoney:
+		case _money: {
+			rec.mLength = sizeof(SQL_NUMERIC_STRUCT);
 		} break;
 		case _char:
 		case _varchar:
@@ -713,11 +686,9 @@ void CppGen::WriteSetTableData(ofstream *outf, std::string &recclassname,
 			rec.mLength = rec.CHARACTER_OCTET_LENGTH + 1;
 			if (rec.mLength > MAXBUF) {
 				rec.mLength = MAXBUF;
-				*outf << Tab << Tab << "char *" << buf.name
-					  << "= new char[MAXBUF];" << NL;
+				*outf << Tab << Tab << "char *" << buf.name << "= new char[MAXBUF];" << NL;
 			} else {
-				*outf << Tab << Tab << "char *" << buf.name << "= new char["
-					  << rec.mLength << "];" << NL;
+				*outf << Tab << Tab << "char *" << buf.name << "= new char[" << rec.mLength << "];" << NL;
 			}
 			buf.position = rec.ORDINAL_POSITION;
 			buf.length = rec.mLength;
@@ -729,8 +700,7 @@ void CppGen::WriteSetTableData(ofstream *outf, std::string &recclassname,
 	}
 	*outf << Tab << Tab << "for (int i = 0;;i++) {" << NL;
 	*outf << Tab << Tab << Tab << "ret = com->mFetch();" << NL;
-	*outf << Tab << Tab << Tab
-		  << "if (ret == SQL_SUCCESS || ret == SQL_SUCCESS_WITH_INFO) {" << NL;
+	*outf << Tab << Tab << Tab << "if (ret == SQL_SUCCESS || ret == SQL_SUCCESS_WITH_INFO) {" << NL;
 	*outf << Tab << Tab << Tab << Tab << recclassname << " rec;" << NL;
 	for (int j = 0; j < tbl->m_Data.size(); j++) {
 		CR_INFORMATION_SCHEMA_COLUMNS rec = tbl->m_Data.at(j);
@@ -753,10 +723,8 @@ void CppGen::WriteSetTableData(ofstream *outf, std::string &recclassname,
 		case _datetime2:
 		case _smalldatetime:
 		case _datetimeoffset: {
-			*outf << Tab << Tab << Tab << Tab << "com->GetData(" << (j + 1)
-				  << ", " << this->Get_C_Type(rec.sqltype);
-			*outf << ", &rec." << rec.COLUMN_NAME << ", sizeof(rec."
-				  << rec.COLUMN_NAME << "), 0);" << NL;
+			*outf << Tab << Tab << Tab << Tab << "com->GetData(" << (j + 1) << ", " << this->Get_C_Type(rec.sqltype);
+			*outf << ", &rec." << rec.COLUMN_NAME << ", sizeof(rec." << rec.COLUMN_NAME << "), 0);" << NL;
 		} break;
 		case _char:
 		case _varchar:
@@ -765,13 +733,11 @@ void CppGen::WriteSetTableData(ofstream *outf, std::string &recclassname,
 		case _nvarchar:
 		case _ntext: {
 			CCharBuffer buf = FindBuffer(&bufnames, rec.ORDINAL_POSITION);
-			*outf << Tab << Tab << Tab << Tab << "memset(" << rec.COLUMN_NAME
-				  << ",0," << buf.length << ");" << NL;
-			*outf << Tab << Tab << Tab << Tab << "com->GetData(" << (j + 1)
-				  << ", SQL_C_CHAR, " << rec.COLUMN_NAME << ", " << buf.length
-				  << ", 0);" << NL;
-			*outf << Tab << Tab << Tab << Tab << "rec." << rec.COLUMN_NAME
-				  << " = (char *)" << rec.COLUMN_NAME << ";" << NL;
+			*outf << Tab << Tab << Tab << Tab << "memset(" << rec.COLUMN_NAME << ",0," << buf.length << ");" << NL;
+			*outf << Tab << Tab << Tab << Tab << "com->GetData(" << (j + 1) << ", SQL_C_CHAR, " << rec.COLUMN_NAME
+				  << ", " << buf.length << ", 0);" << NL;
+			*outf << Tab << Tab << Tab << Tab << "rec." << rec.COLUMN_NAME << " = (char *)" << rec.COLUMN_NAME << ";"
+				  << NL;
 		} break;
 		default:
 			break;
@@ -793,8 +759,7 @@ void CppGen::WriteSetTableData(ofstream *outf, std::string &recclassname,
 		  << NL;
 	*outf << Tab << Tab << "std::string sql = this->Get_SELECT();" << NL;
 	*outf << Tab << Tab << "if (ConditionalFormula.length()>0){" << NL;
-	*outf << Tab << Tab << Tab
-		  << "sql = sql + \" WHERE \" + ConditionalFormula;" << NL;
+	*outf << Tab << Tab << Tab << "sql = sql + \" WHERE \" + ConditionalFormula;" << NL;
 	*outf << Tab << Tab << "}" << NL;
 	*outf << Tab << Tab << "if (OrderBy.length()>0){" << NL;
 	*outf << Tab << Tab << Tab << "sql = sql + \" ORDER BY \" + OrderBy;" << NL;
@@ -851,7 +816,7 @@ std::string CppGen::Get_C_Type(eSqlType typ) {
 		break;
 	case _decimal:
 	case _numeric:
-		ret = "SQL_C_CHAR";
+		ret = "SQL_C_NUMERIC";
 		break;
 	case _real:
 	case _float:
@@ -859,7 +824,7 @@ std::string CppGen::Get_C_Type(eSqlType typ) {
 		break;
 	case _smallmoney:
 	case _money:
-		ret = "SQL_C_CHAR";
+		ret = "SQL_C_NUMERIC";
 		break;
 	case _date:
 	case _time:
@@ -882,4 +847,62 @@ std::string CppGen::Get_C_Type(eSqlType typ) {
 		break;
 	}
 	return ret;
+}
+void CppGen::WriteSynchronize(ofstream *outf, std::string &Recordclassname, CT_INFORMATION_SCHEMA_COLUMNS *tbl) {
+	*outf << "public:" << NL;
+	*outf << Tab << "void Synchronize(COdbcConnection &con) {" << NL;
+	*outf << Tab << Tab << "if (setlocale(LC_CTYPE, \"\") == NULL) return;" << NL;
+	*outf << Tab << Tab << "int icnt = 0;" << NL;
+	*outf << Tab << Tab << "SQLRETURN ret;" << NL;
+	*outf << Tab << Tab << "for (int n = 0; n < this->m_Data.size(); n++) {" << NL;
+	*outf << Tab << Tab << Tab << Recordclassname << " rec = this->m_Data[n];" << NL;
+	*outf << Tab << Tab << Tab << "std::string sql = \"\";" << NL;
+	*outf << Tab << Tab << Tab << "COdbcConnection co2;" << NL;
+	*outf << Tab << Tab << Tab << "co2.Set_Driver(con.Get_Driver());" << NL;
+	*outf << Tab << Tab << Tab << "co2.Set_Server(con.Get_Server());" << NL;
+	*outf << Tab << Tab << Tab << "co2.Set_UserID(con.Get_UserID());" << NL;
+	*outf << Tab << Tab << Tab << "co2.Set_Password(con.Get_Password());" << NL;
+	*outf << Tab << Tab << Tab << "co2.Set_Database(con.Get_Database());" << NL;
+	*outf << Tab << Tab << Tab << "co2.DriverConnect();" << NL;
+	*outf << Tab << Tab << Tab << "COdbcCommand com(&co2);" << NL;
+	*outf << Tab << Tab << Tab << "switch (rec.get_Modify()) {" << NL;
+	*outf << Tab << Tab << Tab << "case _NoModify:" << NL;
+	*outf << Tab << Tab << Tab << "case _Select:" << NL;
+	*outf << Tab << Tab << Tab << Tab << "break;" << NL;
+	*outf << Tab << Tab << Tab << "case _Insert: {" << NL;
+	*outf << Tab << Tab << Tab << Tab << "std::stringstream ss;" << NL;
+	*outf << Tab << Tab << Tab << Tab << "sql = \"INSERT INTO \" + Get_Name() + \" (\";" << NL;
+	*outf << Tab << Tab << Tab << Tab << "icnt = 0;" << NL;
+	*outf << Tab << Tab << Tab << Tab << "for (int col = 0; col < ColumnCount(); col++) {" << NL;
+	*outf << Tab << Tab << Tab << Tab << Tab << "if (Column(col).isIdentity == 0) {" << NL;
+	*outf << Tab << Tab << Tab << Tab << Tab << Tab << "if(icnt != 0){" << NL;
+	*outf << Tab << Tab << Tab << Tab << Tab << Tab << Tab << "sql = sql + \",\";";
+	*outf << Tab << Tab << Tab << Tab << Tab << Tab << Tab << "ss << \",\";";
+	*outf << Tab << Tab << Tab << Tab << Tab << Tab << "}" << NL;
+	*outf << Tab << Tab << Tab << Tab << Tab << Tab << "sql = sql + Column(col).column_name;" << NL;
+	*outf << Tab << Tab << Tab << Tab << Tab << Tab << "ss << \"'\" << rec[col] << \"'\";" << NL;
+	*outf << Tab << Tab << Tab << Tab << Tab << Tab << "icnt++;" << NL;
+	*outf << Tab << Tab << Tab << Tab << Tab << "}" << NL;
+	*outf << Tab << Tab << Tab << Tab << "}" << NL;
+	*outf << Tab << Tab << Tab << Tab << "sql = sql + \") VALUES (\" + ss.str() + \")\";" << NL;
+	*outf << Tab << Tab << Tab << Tab << "ret = com.mSQLExecDirect(sql);" << NL;
+	*outf << Tab << Tab << Tab << "} break;" << NL;
+	*outf << Tab << Tab << Tab << "case _Update: {" << NL;
+	*outf << Tab << Tab << Tab << Tab << "sql = \"UPDATE \" + Get_Name() + \" SET \";" << NL;
+	*outf << Tab << Tab << Tab << Tab << "int cnt = 0;" << NL;
+	*outf << Tab << Tab << Tab << Tab << "for (int col = 0; col < ColumnCount(); col++) {" << NL;
+	*outf << Tab << Tab << Tab << Tab << Tab << "if (Column(col).isIdentity == 0 &&" << NL;
+	*outf << Tab << Tab << Tab << Tab << Tab << Tab << "Column(col).IsKey() < 0) {" << NL;
+	*outf << Tab << Tab << Tab << Tab << Tab << Tab << "if (cnt > 0) sql = sql + \", \";" << NL;
+	*outf << Tab << Tab << Tab << Tab << Tab << Tab
+		  << "sql = sql + Column(col).column_name + \" = '\" + rec[col] + \"'\";" << NL;
+	*outf << Tab << Tab << Tab << Tab << Tab << Tab << "cnt++;" << NL;
+	*outf << Tab << Tab << Tab << Tab << Tab << "}" << NL;
+	*outf << Tab << Tab << Tab << Tab << "}" << NL;
+	*outf << Tab << Tab << Tab << Tab << "sql = sql + WherePrimaryKey(n);" << NL;
+	*outf << Tab << Tab << Tab << Tab << "ret = com.mSQLExecDirect(sql);" << NL;
+	*outf << Tab << Tab << Tab << "} break;" << NL;
+	*outf << Tab << Tab << Tab << "}" << NL;
+	*outf << Tab << Tab << "}" << NL;
+	*outf << Tab << "}" << NL;
 }

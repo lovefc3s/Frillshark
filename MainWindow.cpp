@@ -17,10 +17,8 @@ void MainWindow::setInit_display() {
 	refBuilder->get_widget("_button1", m_button1);
 
 	// connect signals
-	m_button1->signal_clicked().connect(
-		sigc::mem_fun(*this, &MainWindow::on_button1_clicked));
-	this->signal_hide().connect(
-		sigc::mem_fun(*this, &MainWindow::on_hide_window));
+	m_button1->signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::on_button1_clicked));
+	this->signal_hide().connect(sigc::mem_fun(*this, &MainWindow::on_hide_window));
 	Sqlite3Find();
 	string value = "";
 	string id("Driver");
@@ -84,16 +82,13 @@ void MainWindow::setInit_display() {
 void MainWindow::on_hide_window() { std::cout << "hide" << std::endl; }
 
 void MainWindow::on_button1_clicked() {
-	m_ConnectionString = "Driver={" + m_odbccombo->get_active_text() +
-						 "};Server=" + m_servername->get_text() +
-						 ";UID=" + m_user->get_text() +
-						 ";PWD=" + m_pass->get_text() +
+	m_ConnectionString = "Driver={" + m_odbccombo->get_active_text() + "};Server=" + m_servername->get_text() +
+						 ";UID=" + m_user->get_text() + ";PWD=" + m_pass->get_text() +
 						 ";Database=" + m_database->get_text() + ";";
 	m_connection->set_text(m_ConnectionString);
 	string filename = "./" + m_database->get_text() + ".hpp";
 	Glib::ustring title("Odbc Class Header");
-	Gtk::FileChooserDialog *dlg = new Gtk::FileChooserDialog(
-		title, Gtk::FileChooserAction::FILE_CHOOSER_ACTION_SAVE);
+	Gtk::FileChooserDialog *dlg = new Gtk::FileChooserDialog(title, Gtk::FileChooserAction::FILE_CHOOSER_ACTION_SAVE);
 	dlg->add_button(Gtk::Stock::SAVE, Gtk::RESPONSE_OK);
 	dlg->add_button(Gtk::Stock::CANCEL, Gtk::RESPONSE_CANCEL);
 	dlg->set_filename(filename);
@@ -105,20 +100,16 @@ void MainWindow::on_button1_clicked() {
 		con->Set_UserID(m_user->get_text());
 		con->Set_Password(m_pass->get_text());
 		con->Set_Database(m_database->get_text());
-		CppGen *cpp = new CppGen(filename, m_ConnectionString, con, true);
+		CppGen *cpp = new CppGen(filename, m_ConnectionString, con, false);
 		int ret = cpp->Execute();
 		Gtk::MessageDialog *msg = nullptr;
 		if (ret == SQL_ERROR) {
-			msg = new Gtk::MessageDialog(
-				*dlg, "エラーで終了しました。登録情報を確認してください", false,
-				Gtk::MessageType::MESSAGE_ERROR, Gtk::ButtonsType::BUTTONS_OK,
-				false);
+			msg = new Gtk::MessageDialog(*dlg, "エラーで終了しました。登録情報を確認してください", false,
+										 Gtk::MessageType::MESSAGE_ERROR, Gtk::ButtonsType::BUTTONS_OK, false);
 			msg->run();
 		} else if (ret == SQL_NO_DATA) {
-			msg = new Gtk::MessageDialog(
-				*dlg, "テーブルデータがありません。登録情報を確認してください",
-				false, Gtk::MessageType::MESSAGE_ERROR,
-				Gtk::ButtonsType::BUTTONS_OK, false);
+			msg = new Gtk::MessageDialog(*dlg, "テーブルデータがありません。登録情報を確認してください", false,
+										 Gtk::MessageType::MESSAGE_ERROR, Gtk::ButtonsType::BUTTONS_OK, false);
 			msg->run();
 		}
 		if (msg) delete msg;
@@ -159,8 +150,7 @@ SQLRETURN MainWindow::GetDrivers(SQLCHAR *buf) {
 	SQLRETURN ret;
 	ret = SQLAllocHandle(SQL_HANDLE_ENV, SQL_NULL_HANDLE, &henv);
 	m_henv = henv;
-	ret = SQLSetEnvAttr(m_henv, SQL_ATTR_ODBC_VERSION,
-						(SQLPOINTER *)SQL_OV_ODBC3, 0);
+	ret = SQLSetEnvAttr(m_henv, SQL_ATTR_ODBC_VERSION, (SQLPOINTER *)SQL_OV_ODBC3, 0);
 	ret = SQLAllocHandle(SQL_HANDLE_DBC, m_henv, &hdbc);
 	m_hdbc = hdbc;
 	// Set login timeout to 5 seconds
@@ -175,8 +165,7 @@ SQLRETURN MainWindow::GetDrivers(SQLCHAR *buf) {
 		SQLSMALLINT len2 = RESULT_LEN;
 		SQLSMALLINT len3 = RESULT_LEN;
 		SQLSMALLINT len4 = RESULT_LEN;
-		ret = SQLDrivers(m_henv, fitch, drivers, len1, &len2, attributes, len3,
-						 &len4);
+		ret = SQLDrivers(m_henv, fitch, drivers, len1, &len2, attributes, len3, &len4);
 		if (ret != SQL_SUCCESS && ret != SQL_SUCCESS_WITH_INFO) {
 			break;
 		}
@@ -241,8 +230,7 @@ std::string MainWindow::FindSettings(std::string &name) {
 	con.Close();
 	return ret;
 }
-int MainWindow::SelectSettings(std::string &name, std::string *value,
-							   double *dvalue = nullptr) {
+int MainWindow::SelectSettings(std::string &name, std::string *value, double *dvalue = nullptr) {
 	int rs = -1;
 	Shark::SqliteConnection con(__SQLITEFILE__);
 	string sql = "SELECT * FROM t_frillshark WHERE id = '" + name + "'";
@@ -280,16 +268,14 @@ int MainWindow::InsertSettings(std::string &name, std::string &value) {
 	con.Close();
 	return ret;
 }
-void MainWindow::UpdateSettings(std::string &name, std::string &value,
-								double dvalue = 0.0) {
+void MainWindow::UpdateSettings(std::string &name, std::string &value, double dvalue = 0.0) {
 	int rs = -1;
 	Shark::SqliteConnection con(__SQLITEFILE__);
 	con.Open();
 	std::ostringstream s1;
 	s1 << dvalue;
 	string sql("UPDATE t_frillshark SET value = '");
-	sql =
-		sql + value + "', nvalue = " + s1.str() + " WHERE id = '" + name + "';";
+	sql = sql + value + "', nvalue = " + s1.str() + " WHERE id = '" + name + "';";
 	Shark::SqliteCommand com(&con);
 	char *err = nullptr;
 	com.setSql(sql);

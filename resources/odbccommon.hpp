@@ -1105,18 +1105,12 @@ class COdbcRecord {
 public:
 	COdbcRecord() {
 		m_Modify = _NoModify;
-		m_newF = false;
 	}
 	virtual ~COdbcRecord() {}
 	eRecordModify get_Modify() { return m_Modify; }
 	void set_Modify(eRecordModify value) { m_Modify = value; }
-	bool get_Flg() { return m_newF; }
-	void set_Flg(bool value) { m_newF = value; }
 
 	eRecordModify m_Modify;
-
-private:
-	bool m_newF;
 };
 
 class COdbcTable {

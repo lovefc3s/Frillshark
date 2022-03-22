@@ -9,6 +9,7 @@
     "C_Cpp.default.cStandard": "c99",
     "C_Cpp.default.intelliSenseMode": "linux-gcc-x64",
     "C_Cpp.default.compilerPath": "/bin/x86_64-linux-gnu-g++-11",
-    "cmake.generator": "Ninja"
+    "cmake.generator": "Ninja",
+    "editor.wordWrapColumn": 120
     
 }

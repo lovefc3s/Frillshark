@@ -47,8 +47,7 @@ private:
 
 protected:
 	// 抽出結果が返るコールバック関数
-	static int callback(void *NotUsed, int argc, char **argv,
-						char **azColName) {
+	static int callback(void *NotUsed, int argc, char **argv, char **azColName) {
 		int i;
 		for (i = 0; i < argc; i++)
 			printf("%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
@@ -71,8 +70,7 @@ public:
 		}
 	}
 	void setSql(std::string sql) { _sql = sql; }
-	int Prepare(/*sqlite3 *db,*/ const char *zSql, int nByte,
-				sqlite3_stmt **ppStmt, const char **pzTail) {
+	int Prepare(/*sqlite3 *db,*/ const char *zSql, int nByte, sqlite3_stmt **ppStmt, const char **pzTail) {
 		int rc = -1;
 		rc = sqlite3_prepare_v2(_Db, zSql, nByte, ppStmt, pzTail);
 		_pstmt = *ppStmt;
@@ -88,16 +86,12 @@ public:
 		_pstmt = statement;
 		return Column_int(column);
 	}
-	const unsigned char *Column_text(int column) {
-		return sqlite3_column_text(_pstmt, column);
-	}
+	const unsigned char *Column_text(int column) { return sqlite3_column_text(_pstmt, column); }
 	const unsigned char *Column_text(sqlite3_stmt *statement, int column) {
 		_pstmt = statement;
 		return Column_text(column);
 	}
-	double Column_double(int column) {
-		return sqlite3_column_double(_pstmt, column);
-	}
+	double Column_double(int column) { return sqlite3_column_double(_pstmt, column); }
 	double Column_double(sqlite3_stmt *statement, int column) {
 		_pstmt = statement;
 		return Column_double(column);

@@ -4,8 +4,7 @@
 
 class MainWindow : public Gtk::ApplicationWindow {
 public:
-	MainWindow(BaseObjectType *obj,
-			   Glib::RefPtr<Gtk::Builder> const &m_builder_)
+	MainWindow(BaseObjectType *obj, Glib::RefPtr<Gtk::Builder> const &m_builder_)
 		: Gtk::ApplicationWindow(obj), m_builder{m_builder_} {
 		setInit_display();
 	}
