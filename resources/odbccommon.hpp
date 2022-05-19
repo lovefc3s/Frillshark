@@ -1109,6 +1109,11 @@ public:
 	virtual ~COdbcRecord() {}
 	eRecordModify get_Modify() { return m_Modify; }
 	void set_Modify(eRecordModify value) { m_Modify = value; }
+public:
+	virtual std::string operator[](int i){
+		std::string ret = "";
+		return ret;
+	}
 
 	eRecordModify m_Modify;
 };

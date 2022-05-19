@@ -6,8 +6,8 @@
 	Set_UserID("testuser");
 	Set_Password(" .... ");
 	Set_Database("testdb");
-	Microsoft SQL Server 2019 (RTM-CU13) (KB5005679) - 15.0.4178.1 (X64)
-	Sep 23 2021 16:47:49
+	Microsoft SQL Server 2019 (RTM-CU13) (KB5005679) - 15.0.4178.1 (X64) 
+	Sep 23 2021 16:47:49 
 	Copyright (C) 2019 Microsoft Corporation
 	Express Edition (64-bit) on Linux (Ubuntu 21.10) <X64>
 */
@@ -16,38 +16,36 @@
 #define __TESTDB_HPP__
 #include "odbccommon_testdb.hpp"
 using namespace OdbcCommon;
-class CR_t_testtable : public COdbcRecord {
+class CR_t_testtable:public COdbcRecord {
 public:
-	CR_t_testtable() : COdbcRecord() { Initialize(); }
-	virtual ~CR_t_testtable() {}
-
-	void Initialize() {
-		id = 0;
-		name = "";
-		memset(&value, 0, sizeof(value));
+	CR_t_testtable():COdbcRecord() { 
+		Initialize();
+	}
+	virtual ~CR_t_testtable() { 
 	}
 
+	void Initialize() { 
+		id	= 0;
+		name	= "";
+		memset(&value,0,sizeof(value));
+	}
 public:
-	SQLINTEGER id;
-	std::string name;
-	TIMESTAMP_STRUCT date;
-	SQL_NUMERIC_STRUCT value;
+	SQLINTEGER	id;
+	std::string	name;
+	TIMESTAMP_STRUCT	date;
+	SQL_NUMERIC_STRUCT	value;
 	std::string operator[](int i) {
 		std::string ret = "";
 		std::stringstream ss;
-		switch (i) {
-		case 0: {
-			ss << this->id;
+		switch(i) {
+		case 0: {			ss << this->id;
 		} break;
-		case 1: {
-			ss << this->name;
+		case 1: {			ss << this->name;
 		} break;
-		case 2: {
-			COdbcDateTime date(&this->date);
+		case 2: {			COdbcDateTime date(&this->date);
 			ss << date.to_string();
 		} break;
-		case 3: {
-			ss << COdbcColumn::NumericToString(&this->value);
+		case 3: {			ss << COdbcColumn::NumericToString(&this->value);
 		} break;
 		defoult:
 			break;
@@ -56,47 +54,45 @@ public:
 		return ret;
 	}
 };
-class CT_t_testtable : public COdbcTable {
+class CT_t_testtable:public COdbcTable {
 public:
-	CT_t_testtable() : COdbcTable() {
+	CT_t_testtable():COdbcTable() { 
 		m_TableName = "t_testtable";
 		m_SqlSELECT = "SELECT "
-					  "id,"
-					  "name,"
-					  "date,"
-					  "value"
-					  " FROM t_testtable";
+			"id,"
+			"name,"
+			"date,"
+			"value"
+			" FROM t_testtable";
 		m_SqlINSERT = "INSERT INTO t_testtable ("
-					  "id,"
-					  "name,"
-					  "date,"
-					  "value)"
-					  " VALUES ( ?,?,?,?)";
+			"id,"
+			"name,"
+			"date,"
+			"value)"
+			" VALUES ( ?,?,?,?)";
 		m_SqlUPDATE = "UPDATE t_testtable SET "
-					  "name = ?,"
-					  "date = ?,"
-					  "value = ?";
+			"name = ?,"
+			"date = ?,"
+			"value = ?";
 
 		m_SqlDELETE = "DELETE t_testtable ";
 		COdbcColumn col;
-		col.SetValue("testdb", "dbo", "t_testtable", "id", "1", "", "NO", "int", "0", "0", "10", "0", "0", "", "", 0,
-					 _int, 0);
+		col.SetValue("testdb","dbo","t_testtable","id","1","","NO","int","0","0","10","0","0","","",0,_int, 0);
 		m_Column.push_back(col);
-		col.SetValue("testdb", "dbo", "t_testtable", "name", "2", "", "YES", "varchar", "50", "50", "0", "0", "0",
-					 "cp932", "Japanese_CI_AS", 0, _varchar, -1);
+		col.SetValue("testdb","dbo","t_testtable","name","2","","YES","varchar","50","50","0","0","0","cp932","Japanese_CI_AS",0,_varchar, -1);
 		m_Column.push_back(col);
-		col.SetValue("testdb", "dbo", "t_testtable", "date", "3", "", "YES", "datetime", "0", "0", "0", "0", "3", "",
-					 "", 0, _datetime, -1);
+		col.SetValue("testdb","dbo","t_testtable","date","3","","YES","datetime","0","0","0","0","3","","",0,_datetime, -1);
 		m_Column.push_back(col);
-		col.SetValue("testdb", "dbo", "t_testtable", "value", "4", "", "YES", "decimal", "0", "0", "32", "0", "0", "",
-					 "", 0, _decimal, -1);
+		col.SetValue("testdb","dbo","t_testtable","value","4","","YES","decimal","0","0","32","0","0","","",0,_decimal, -1);
 		m_Column.push_back(col);
 		m_Key.clear();
 		COdbcKeyColumn key;
-		key.Set_Value("PK__t_testta__3213E83FACC63898", "id", 1);
+		key.Set_Value("PK__t_testta__3213E83FACC63898","id",1);
 		m_Key.push_back(key);
 	}
-	virtual ~CT_t_testtable() { m_Data.clear(); }
+	virtual ~CT_t_testtable() { 
+		m_Data.clear();
+	}
 
 public:
 	SQLLEN Set_TableData(COdbcCommand *com) {
@@ -105,51 +101,51 @@ public:
 		this->m_Data.clear();
 		ret = com->mSQLExecDirect();
 		if (ret != SQL_SUCCESS && ret != SQL_SUCCESS_WITH_INFO) return -1;
-		char *name = new char[51];
-		for (int i = 0;; i++) {
+		char *name= new char[51];
+		for (int i = 0;;i++) {
 			ret = com->mFetch();
 			if (ret == SQL_SUCCESS || ret == SQL_SUCCESS_WITH_INFO) {
 				CR_t_testtable rec;
 				com->GetData(1, SQL_C_LONG, &rec.id, sizeof(rec.id), 0);
-				memset(name, 0, 51);
+				memset(name,0,51);
 				com->GetData(2, SQL_C_CHAR, name, 51, 0);
 				rec.name = (char *)name;
 				com->GetData(3, SQL_C_TYPE_TIMESTAMP, &rec.date, sizeof(rec.date), 0);
 				com->GetData(4, SQL_C_NUMERIC, &rec.value, sizeof(rec.value), 0);
 				m_Data.push_back(rec);
 				Count++;
-			} else
-				break;
+			} else break;
 		}
 		delete[] name;
 		return Count;
 	}
-	SQLLEN Set_TableData(COdbcCommand *com, std::string ConditionalFormula, std::string OrderBy = "") {
+	SQLLEN Set_TableData(COdbcCommand *com,std::string ConditionalFormula, std::string OrderBy = "") {
 		std::string sql = this->Get_SELECT();
-		if (ConditionalFormula.length() > 0) {
+		if (ConditionalFormula.length()>0){
 			sql = sql + " WHERE " + ConditionalFormula;
 		}
-		if (OrderBy.length() > 0) {
+		if (OrderBy.length()>0){
 			sql = sql + " ORDER BY " + OrderBy;
 		}
 		com->SetCommandString(sql);
 		return this->Set_TableData(com);
 	}
-	CR_t_testtable operator[](int n) { return m_Data.at(n); }
+	CR_t_testtable operator[](int n) {
+		return m_Data.at(n);
+	}
 	std::string WherePrimaryKey(CR_t_testtable &rec) {
 		std::string sql = "";
 		for (int j = 0; j < this->KeyCount(); j++) {
-			if (j == 0)
-				sql = " WHERE ";
-			else
-				sql = sql + " AND ";
+			if (j == 0) sql = " WHERE ";
+			else sql = sql + " AND ";
 			int pos = this->Key(j).KEY_ORDINAL_POSITION - 1;
 			sql = sql + this->Key(j).KEY_COLUMN_NAME + " = '" + rec[pos] + "'";
 		}
 		return sql;
 	}
-	std::string WherePrimaryKey(int i) { return WherePrimaryKey(this->m_Data[i]); }
-
+	std::string WherePrimaryKey (int i){
+		return WherePrimaryKey(this->m_Data[i]);
+	}
 public:
 	void Synchronize(COdbcConnection &con) {
 		if (setlocale(LC_CTYPE, "") == NULL) return;
@@ -176,10 +172,8 @@ public:
 				icnt = 0;
 				for (int col = 0; col < ColumnCount(); col++) {
 					if (Column(col).isIdentity == 0) {
-						if (icnt != 0) {
-							sql = sql + ",";
-							ss << ",";
-						}
+						if(icnt != 0){
+							sql = sql + ",";							ss << ",";						}
 						sql = sql + Column(col).column_name;
 						ss << "'" << rec[col] << "'";
 						icnt++;
@@ -192,7 +186,8 @@ public:
 				sql = "UPDATE " + Get_Name() + " SET ";
 				int cnt = 0;
 				for (int col = 0; col < ColumnCount(); col++) {
-					if (Column(col).isIdentity == 0 && Column(col).IsKey() < 0) {
+					if (Column(col).isIdentity == 0 &&
+						Column(col).IsKey() < 0) {
 						if (cnt > 0) sql = sql + ", ";
 						sql = sql + Column(col).column_name + " = '" + rec[col] + "'";
 						cnt++;
@@ -201,40 +196,41 @@ public:
 				sql = sql + WherePrimaryKey(n);
 				ret = com.mSQLExecDirect(sql);
 			} break;
+			case _Delete: {
+				sql = "DELETE " + Get_Name() + WherePrimaryKey(n);
+				ret = com.mSQLExecDirect(sql);
+			} break;
 			}
 		}
 	}
-
 public:
-	std::vector<CR_t_testtable> m_Data;
-};
-class CR_t_named : public COdbcRecord {
+	std::vector<CR_t_testtable> m_Data;};
+class CR_t_named:public COdbcRecord {
 public:
-	CR_t_named() : COdbcRecord() { Initialize(); }
-	virtual ~CR_t_named() {}
-
-	void Initialize() {
-		memset(&autoid, 0, sizeof(autoid));
-		name_id = "";
-		name_value = "";
+	CR_t_named():COdbcRecord() { 
+		Initialize();
+	}
+	virtual ~CR_t_named() { 
 	}
 
+	void Initialize() { 
+		memset(&autoid,0,sizeof(autoid));
+		name_id	= "";
+		name_value	= "";
+	}
 public:
-	SQL_NUMERIC_STRUCT autoid;
-	std::string name_id;
-	std::string name_value;
+	SQL_NUMERIC_STRUCT	autoid;
+	std::string	name_id;
+	std::string	name_value;
 	std::string operator[](int i) {
 		std::string ret = "";
 		std::stringstream ss;
-		switch (i) {
-		case 0: {
-			ss << COdbcColumn::NumericToString(&this->autoid);
+		switch(i) {
+		case 0: {			ss << COdbcColumn::NumericToString(&this->autoid);
 		} break;
-		case 1: {
-			ss << this->name_id;
+		case 1: {			ss << this->name_id;
 		} break;
-		case 2: {
-			ss << this->name_value;
+		case 2: {			ss << this->name_value;
 		} break;
 		defoult:
 			break;
@@ -243,40 +239,39 @@ public:
 		return ret;
 	}
 };
-class CT_t_named : public COdbcTable {
+class CT_t_named:public COdbcTable {
 public:
-	CT_t_named() : COdbcTable() {
+	CT_t_named():COdbcTable() { 
 		m_TableName = "t_named";
 		m_SqlSELECT = "SELECT "
-					  "autoid,"
-					  "name_id,"
-					  "name_value"
-					  " FROM t_named";
+			"autoid,"
+			"name_id,"
+			"name_value"
+			" FROM t_named";
 		m_SqlINSERT = "INSERT INTO t_named ("
-					  "name_id,"
-					  "name_value)"
-					  " VALUES ( ?,?)";
+			"name_id,"
+			"name_value)"
+			" VALUES ( ?,?)";
 		m_SqlUPDATE = "UPDATE t_named SET "
-					  "name_id = ?,"
-					  "name_value = ?";
+			"name_id = ?,"
+			"name_value = ?";
 
 		m_SqlDELETE = "DELETE t_named ";
 		COdbcColumn col;
-		col.SetValue("testdb", "dbo", "t_named", "autoid", "1", "", "NO", "numeric", "0", "0", "18", "0", "0", "", "",
-					 1, _numeric, 0);
+		col.SetValue("testdb","dbo","t_named","autoid","1","","NO","numeric","0","0","18","0","0","","",1,_numeric, 0);
 		m_Column.push_back(col);
-		col.SetValue("testdb", "dbo", "t_named", "name_id", "2", "", "NO", "nvarchar", "50", "100", "0", "0", "0",
-					 "UNICODE", "Japanese_CI_AS", 0, _nvarchar, -1);
+		col.SetValue("testdb","dbo","t_named","name_id","2","","NO","nvarchar","50","100","0","0","0","UNICODE","Japanese_CI_AS",0,_nvarchar, -1);
 		m_Column.push_back(col);
-		col.SetValue("testdb", "dbo", "t_named", "name_value", "3", "", "YES", "nvarchar", "-1", "-1", "0", "0", "0",
-					 "UNICODE", "Japanese_CI_AS", 0, _nvarchar, -1);
+		col.SetValue("testdb","dbo","t_named","name_value","3","","YES","nvarchar","-1","-1","0","0","0","UNICODE","Japanese_CI_AS",0,_nvarchar, -1);
 		m_Column.push_back(col);
 		m_Key.clear();
 		COdbcKeyColumn key;
-		key.Set_Value("PK_t_nameed", "autoid", 1);
+		key.Set_Value("PK_t_nameed","autoid",1);
 		m_Key.push_back(key);
 	}
-	virtual ~CT_t_named() { m_Data.clear(); }
+	virtual ~CT_t_named() { 
+		m_Data.clear();
+	}
 
 public:
 	SQLLEN Set_TableData(COdbcCommand *com) {
@@ -285,54 +280,54 @@ public:
 		this->m_Data.clear();
 		ret = com->mSQLExecDirect();
 		if (ret != SQL_SUCCESS && ret != SQL_SUCCESS_WITH_INFO) return -1;
-		char *name_id = new char[101];
-		char *name_value = new char[0];
-		for (int i = 0;; i++) {
+		char *name_id= new char[101];
+		char *name_value= new char[0];
+		for (int i = 0;;i++) {
 			ret = com->mFetch();
 			if (ret == SQL_SUCCESS || ret == SQL_SUCCESS_WITH_INFO) {
 				CR_t_named rec;
 				com->GetData(1, SQL_C_NUMERIC, &rec.autoid, sizeof(rec.autoid), 0);
-				memset(name_id, 0, 101);
+				memset(name_id,0,101);
 				com->GetData(2, SQL_C_CHAR, name_id, 101, 0);
 				rec.name_id = (char *)name_id;
-				memset(name_value, 0, 0);
+				memset(name_value,0,0);
 				com->GetData(3, SQL_C_CHAR, name_value, 0, 0);
 				rec.name_value = (char *)name_value;
 				m_Data.push_back(rec);
 				Count++;
-			} else
-				break;
+			} else break;
 		}
 		delete[] name_id;
 		delete[] name_value;
 		return Count;
 	}
-	SQLLEN Set_TableData(COdbcCommand *com, std::string ConditionalFormula, std::string OrderBy = "") {
+	SQLLEN Set_TableData(COdbcCommand *com,std::string ConditionalFormula, std::string OrderBy = "") {
 		std::string sql = this->Get_SELECT();
-		if (ConditionalFormula.length() > 0) {
+		if (ConditionalFormula.length()>0){
 			sql = sql + " WHERE " + ConditionalFormula;
 		}
-		if (OrderBy.length() > 0) {
+		if (OrderBy.length()>0){
 			sql = sql + " ORDER BY " + OrderBy;
 		}
 		com->SetCommandString(sql);
 		return this->Set_TableData(com);
 	}
-	CR_t_named operator[](int n) { return m_Data.at(n); }
+	CR_t_named operator[](int n) {
+		return m_Data.at(n);
+	}
 	std::string WherePrimaryKey(CR_t_named &rec) {
 		std::string sql = "";
 		for (int j = 0; j < this->KeyCount(); j++) {
-			if (j == 0)
-				sql = " WHERE ";
-			else
-				sql = sql + " AND ";
+			if (j == 0) sql = " WHERE ";
+			else sql = sql + " AND ";
 			int pos = this->Key(j).KEY_ORDINAL_POSITION - 1;
 			sql = sql + this->Key(j).KEY_COLUMN_NAME + " = '" + rec[pos] + "'";
 		}
 		return sql;
 	}
-	std::string WherePrimaryKey(int i) { return WherePrimaryKey(this->m_Data[i]); }
-
+	std::string WherePrimaryKey (int i){
+		return WherePrimaryKey(this->m_Data[i]);
+	}
 public:
 	void Synchronize(COdbcConnection &con) {
 		if (setlocale(LC_CTYPE, "") == NULL) return;
@@ -359,10 +354,8 @@ public:
 				icnt = 0;
 				for (int col = 0; col < ColumnCount(); col++) {
 					if (Column(col).isIdentity == 0) {
-						if (icnt != 0) {
-							sql = sql + ",";
-							ss << ",";
-						}
+						if(icnt != 0){
+							sql = sql + ",";							ss << ",";						}
 						sql = sql + Column(col).column_name;
 						ss << "'" << rec[col] << "'";
 						icnt++;
@@ -375,7 +368,8 @@ public:
 				sql = "UPDATE " + Get_Name() + " SET ";
 				int cnt = 0;
 				for (int col = 0; col < ColumnCount(); col++) {
-					if (Column(col).isIdentity == 0 && Column(col).IsKey() < 0) {
+					if (Column(col).isIdentity == 0 &&
+						Column(col).IsKey() < 0) {
 						if (cnt > 0) sql = sql + ", ";
 						sql = sql + Column(col).column_name + " = '" + rec[col] + "'";
 						cnt++;
@@ -384,11 +378,13 @@ public:
 				sql = sql + WherePrimaryKey(n);
 				ret = com.mSQLExecDirect(sql);
 			} break;
+			case _Delete: {
+				sql = "DELETE " + Get_Name() + WherePrimaryKey(n);
+				ret = com.mSQLExecDirect(sql);
+			} break;
 			}
 		}
 	}
-
 public:
-	std::vector<CR_t_named> m_Data;
-};
+	std::vector<CR_t_named> m_Data;};
 #endif

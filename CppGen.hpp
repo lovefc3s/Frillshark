@@ -61,6 +61,64 @@ public:
 	OdbcCommon::eSqlType sqltype;
 	int mIdentity;
 	int mLength;
+
+public:
+	std::string operator[](int i) {
+		std::string ret = "";
+		std::stringstream ss;
+		if (i < 0 || i > 14) return ret;
+		switch (i) {
+		case 0:
+			ss << TABLE_CATALOG;
+			break;
+		case 1:
+			ss << TABLE_SCHEMA;
+			break;
+		case 2:
+			ss << TABLE_NAME;
+			break;
+		case 3:
+			ss << COLUMN_NAME;
+			break;
+		case 4:
+			ss << ORDINAL_POSITION;
+			break;
+		case 5:
+			ss << COLUMN_DEFAULT;
+			break;
+		case 6:
+			ss << IS_NULLABLE;
+			break;
+		case 7:
+			ss << DATA_TYPE;
+			break;
+		case 8:
+			ss << CHARACTER_MAXIMUM_LENGTH;
+			break;
+		case 9:
+			ss << CHARACTER_OCTET_LENGTH;
+			break;
+		case 10:
+			ss << NUMERIC_PRECISION;
+			break;
+		case 11:
+			ss << NUMERIC_SCALE;
+			break;
+		case 12:
+			ss << DATETIME_PRECISION;
+			break;
+		case 13:
+			ss << CHARACTER_SET_NAME;
+			break;
+		case 14:
+			ss << COLLATION_NAME;
+			break;
+		default:
+			break;
+		}
+		ret = ss.str();
+		return ret;
+	}
 };
 class CT_INFORMATION_SCHEMA_COLUMNS : public COdbcTable {
 public:

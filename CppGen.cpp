@@ -902,6 +902,10 @@ void CppGen::WriteSynchronize(ofstream *outf, std::string &Recordclassname, CT_I
 	*outf << Tab << Tab << Tab << Tab << "sql = sql + WherePrimaryKey(n);" << NL;
 	*outf << Tab << Tab << Tab << Tab << "ret = com.mSQLExecDirect(sql);" << NL;
 	*outf << Tab << Tab << Tab << "} break;" << NL;
+	*outf << Tab << Tab << Tab << "case _Delete: {" << NL;
+	*outf << Tab << Tab << Tab << Tab << "sql = \"DELETE \" + Get_Name() + WherePrimaryKey(n);" << NL;
+	*outf << Tab << Tab << Tab << Tab << "ret = com.mSQLExecDirect(sql);" << NL;
+	*outf << Tab << Tab << Tab << "} break;" << NL;
 	*outf << Tab << Tab << Tab << "}" << NL;
 	*outf << Tab << Tab << "}" << NL;
 	*outf << Tab << "}" << NL;
