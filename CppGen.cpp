@@ -183,7 +183,7 @@ int CppGen::Execute() {
 		WriteWherePrimaryKey(outf, RecClassName);
 		WriteSynchronize(outf, RecClassName, tbl);
 		*outf << "public:" << NL;
-		*outf << Tab << "std::vector<" << RecClassName << "> m_Data;";
+		*outf << Tab << "std::vector<" << RecClassName << "> m_Data;" << NL;
 		*outf << "};" << NL;
 		delete tbl;
 		delete cm2;

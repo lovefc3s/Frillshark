@@ -100,6 +100,7 @@ void MainWindow::on_button1_clicked() {
 		con->Set_UserID(m_user->get_text());
 		con->Set_Password(m_pass->get_text());
 		con->Set_Database(m_database->get_text());
+		int re1 = con->DriverConnect();
 		CppGen *cpp = new CppGen(filename, m_ConnectionString, con, false);
 		int ret = cpp->Execute();
 		Gtk::MessageDialog *msg = nullptr;

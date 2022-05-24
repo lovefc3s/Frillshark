@@ -5,6 +5,14 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "type": "lldb",
+            "request": "launch",
+            "name": "(lldb)Launch",
+            "program": "${workspaceFolder}/build/test/Frillshark",
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
             "name": "(gdb) 起動",
             "type": "cppdbg",
             "request": "launch",

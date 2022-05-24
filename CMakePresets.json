@@ -12,6 +12,30 @@
                 "CMAKE_TOOLCHAIN_FILE": "",
                 "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/${presetName}"
             }
+        },
+        {
+            "name": "gcc",
+            "displayName": "GCC 11.2.0 x86_64-linux-gnu",
+            "description": "Using compilers: C = /usr/bin/gcc, CXX = /usr/bin/g++",
+            "binaryDir": "${sourceDir}/out/build/${presetName}",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
+                "CMAKE_C_COMPILER": "/usr/bin/gcc",
+                "CMAKE_CXX_COMPILER": "/usr/bin/g++"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "clang",
+            "description": "",
+            "displayName": ""
+        },
+        {
+            "name": "clang",
+            "description": "",
+            "displayName": ""
         }
     ]
 }
