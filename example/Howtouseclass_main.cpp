@@ -1,7 +1,7 @@
-#include "testdb.hpp"
+#include "ootabe.hpp"
 using namespace OdbcCommon;
 int main(int argc, char *argv[]) {
-	COdbcConnection con("ODBC Driver 17 for SQL Server", "192.168.1.16", "testuser", "010101", "testdb");
+	COdbcConnection con("ODBC Driver 17 for SQL Server", "192.168.0.254", "masamitsu", "daikiy", "ootabe");
 	// con.Set_Driver("ODBC Driver 17 for SQL Server");
 	// con.Set_Server("192.168.1.16");
 	// con.Set_UserID("testuser");
@@ -15,7 +15,8 @@ int main(int argc, char *argv[]) {
 	COdbcCommand com(&con);
 	std::string sql = "SELECT ";
 	std::stringstream ss;
-	CT_t_testtable tbl;
+
+	CT_t_meisai tbl;
 	ss << sql;
 	for (int i = 0; i < tbl.ColumnCount(); i++) {
 		COdbcColumn column = tbl.Column(i);
@@ -30,17 +31,18 @@ int main(int argc, char *argv[]) {
 	for (int i = 0;; i++) {
 		ret = com.mFetch();
 		if (ret == SQL_SUCCESS || ret == SQL_SUCCESS_WITH_INFO) {
-			CR_t_testtable rec;
+			CR_t_meisai rec;
 			SQLLEN len = 0;
 			memset(name, 0, MAXBUF);
-			com.GetData(1, SQL_C_LONG, &rec.id, 4, 0);
-			com.GetData(2, SQL_C_CHAR, name, MAXBUF, &len);
-			rec.name = (char *)name;
+			com.GetData(1, SQL_C_LONG, &rec.mes_id, 4, 0);
+			com.GetData(4, SQL_C_CHAR, name, MAXBUF, &len);
+			rec.mes_name = (char *)name;
 			tbl.m_Data.push_back(rec);
 		} else
 			break;
 	}
 	delete[] name;
+
 
 	con.Disconnect();
 	return 0;

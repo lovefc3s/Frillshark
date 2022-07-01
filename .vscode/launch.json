@@ -8,7 +8,7 @@
             "type": "lldb",
             "request": "launch",
             "name": "(lldb)Launch",
-            "program": "${workspaceFolder}/build/test/Frillshark",
+            "program": "${workspaceFolder}/build/Frillshark",
             "args": [],
             "cwd": "${workspaceFolder}"
         },
@@ -16,7 +16,7 @@
             "name": "(gdb) 起動",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build/test/Frillshark",
+            "program": "${workspaceFolder}/build/Frillshark",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
@@ -24,6 +24,26 @@
             "externalConsole": false,
             "MIMode": "gdb",
             "setupCommands": [
+                {
+                    "description": "UTF-8",
+                    "text": "set target-charset UTF-8",
+                    "ignoreFailures": false
+                },
+                {
+                    "description": "CP932",
+                    "text": "set host-charset CP932",
+                    "ignoreFailures": false
+                },
+                {
+                    "description": "8bit",
+                    "text": "set print sevenbit-strings off",
+                    "ignoreFailures": false
+                },
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": false
+                },
                 {
                     "description": "gdb の再フォーマットを有効にする",
                     "text": "-enable-pretty-printing",
