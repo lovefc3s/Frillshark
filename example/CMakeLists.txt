@@ -9,7 +9,7 @@ add_executable(${PROJECT_NAME}
  Howtouseclass_main.cpp
 )
 target_precompile_headers( ${PROJECT_NAME}
- PUBLIC ootabe.hpp
+ PUBLIC ootabe.hxx
 )
 include_directories(
  ${ODBC_INCLUDE_DIRS}

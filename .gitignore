@@ -457,3 +457,5 @@ build.sh
 resources/*.bak
 resources/Frillshark.sqlite3
 example/.vscode/
+example/odbccommon_ootabe.hpp
+example/ootabe.hxx
