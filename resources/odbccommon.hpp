@@ -57,7 +57,7 @@ typedef enum {
 	_nvarchar = 21,
 	_ntext = 22,
 	_binary = 23,
-	_verbinary = 24,
+	_varbinary = 24,
 	_image = 25,
 	_xml = 26,
 } eSqlType;
@@ -1205,7 +1205,9 @@ public:
 			std::string str = (char *)pv;
 			ss << "'" << str << "'";
 		} break;
-		case _binary: {
+		case _binary: 
+		case _varbinary:
+		case _image:{
 			size_t size = atoi(col->character_octet_length.c_str());
 			SQLCHAR *pv = (SQLCHAR *)pval;
 			stringstream s2;

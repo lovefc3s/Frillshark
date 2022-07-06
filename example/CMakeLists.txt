@@ -4,12 +4,12 @@ project(Howto VERSION 0.1.0)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(ODBC odbc REQUIRED)
 add_executable(${PROJECT_NAME}
- ootabe.hpp
+ testdb.hpp
  
  Howtouseclass_main.cpp
 )
 target_precompile_headers( ${PROJECT_NAME}
- PUBLIC ootabe.hxx
+ PUBLIC testdb.hpp
 )
 include_directories(
  ${ODBC_INCLUDE_DIRS}

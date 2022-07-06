@@ -121,8 +121,10 @@ int CppGen::Execute() {
 			sql = sql + " WHERE TABLE_CATALOG = '" + m_con->Get_Database() + "' AND TABLE_NAME = '" + tblname +
 				  "' ORDER BY ORDINAL_POSITION;";
 		}
-		string RecClassName = "CR_" + tblname;
-		string TblClassName = "CT_" + tblname;
+		string cpptablname = tblname;
+		cpptablname = regex_replace(cpptablname, regex(" "),"_");
+		string RecClassName = "CR_" + cpptablname;
+		string TblClassName = "CT_" + cpptablname;
 		*outf << "class " << RecClassName << ":public COdbcRecord {" << NL;
 		*outf << "public:" << NL;
 		WriteRecConstructor(outf, RecClassName);
@@ -351,8 +353,16 @@ void CppGen::WriteRecInitialize(ofstream *outf, CT_INFORMATION_SCHEMA_COLUMNS *t
 			*outf << Tab << Tab << rec.COLUMN_NAME << Tab << "= \"\";" << NL;
 			break;
 		}
-		case _binary: {
-			*outf << Tab << Tab << "memset(" << rec.COLUMN_NAME << ",0," << rec.CHARACTER_MAXIMUM_LENGTH << ");" << NL;
+		case _binary:
+		case _varbinary:
+		case _image: {
+			int len = rec.CHARACTER_MAXIMUM_LENGTH;
+			if(len < 0){
+				len = MAXBUF;
+			}else if (len > MAXBUF) {
+				len = MAXBUF;
+			}
+			*outf << Tab << Tab << "memset(" << rec.COLUMN_NAME << ",0," << len << ");" << NL;
 			break;
 		}
 		default:
@@ -423,17 +433,19 @@ void CppGen::WriteRecordData(ofstream *outf, CT_INFORMATION_SCHEMA_COLUMNS *tbl)
 			*outf << Tab << "std::string" << Tab << rec.COLUMN_NAME << ";" << NL;
 			break;
 		}
-		case _binary: {
+		case _binary:
+		case _varbinary:
+		case _image: {
 			int len = MAXBUF;
-			rec.CHARACTER_MAXIMUM_LENGTH;
+			//rec.CHARACTER_MAXIMUM_LENGTH;
 			int wklen = (int)rec.CHARACTER_MAXIMUM_LENGTH;
 			if (wklen < 0) wklen = MAXBUF;
 			if (wklen > MAXBUF)
 				len = MAXBUF;
 			else {
 				len = wklen;
-				*outf << Tab << "SQLCHAR" << Tab << rec.COLUMN_NAME << "[" << len << "];" << NL;
 			}
+			*outf << Tab << "SQLCHAR" << Tab << rec.COLUMN_NAME << "[" << len << "];" << NL;
 		} break;
 		default:
 			break;
@@ -490,28 +502,50 @@ void CppGen::WriteTblConstructor(ofstream *outf, std::string &classname, CT_INFO
 	insrt << Tab << Tab << "m_SqlINSERT = \"INSERT INTO " << tblname << " (\"" << NL;
 	std::stringstream updat;
 	updat << Tab << Tab << "m_SqlUPDATE = \"UPDATE " << tblname << " SET \"" << NL;
+	bool instcommaf = false;
+	bool updtcommaf = false;
 	for (int i = 0; i < tbl->m_Data.size(); i++) {
 		CR_INFORMATION_SCHEMA_COLUMNS rec = tbl->m_Data.at(i);
+		
 		if (i == (tbl->m_Data.size() - 1)) {
 			*outf << Tab << Tab << Tab << "\"" << rec.COLUMN_NAME << "\"" << NL;
 			*outf << Tab << Tab << Tab << "\" FROM " << rec.TABLE_NAME << "\";" << NL;
 			if (rec.mIdentity == 0) {
+				if(instcommaf) {
+					insrt << ",\"" << NL;
+					instcommaf = false;
+				}
 				insrt << Tab << Tab << Tab << "\"" << rec.COLUMN_NAME;
 				if (FindKey(rec) == -1) {
-					updat << Tab << Tab << Tab << "\"" << rec.COLUMN_NAME << " = ?\";" << NL;
+					if(updtcommaf) {
+						updat << ",\"" << NL;
+						updtcommaf = false;
+					}
+					updat << Tab << Tab << Tab << "\"" << rec.COLUMN_NAME << " = ?";
 				}
 			}
 			insrt << ")\"" << NL;
 		} else {
 			*outf << Tab << Tab << Tab << "\"" << rec.COLUMN_NAME << ",\"" << NL;
 			if (rec.mIdentity == 0) {
-				insrt << Tab << Tab << Tab << "\"" << rec.COLUMN_NAME << ",\"" << NL;
+				if(instcommaf) {
+					insrt << ",\"" << NL;
+					instcommaf = false;
+				}
+				insrt << Tab << Tab << Tab << "\"" << rec.COLUMN_NAME;
+				instcommaf = true;
 				if (FindKey(rec) == -1) {
-					updat << Tab << Tab << Tab << "\"" << rec.COLUMN_NAME << " = ?,\"" << NL;
+					if(updtcommaf) {
+						updat << ",\"" << NL;
+						updtcommaf = false;
+					}
+					updat << Tab << Tab << Tab << "\"" << rec.COLUMN_NAME << " = ?";
+					updtcommaf = true;
 				}
 			}
 		}
 	}
+	updat << "\";" << NL;
 	insrt << Tab << Tab << Tab << "\" VALUES ( ";
 	for (int j = 0; j < tbl->m_Data.size(); j++) {
 		CR_INFORMATION_SCHEMA_COLUMNS rc2 = tbl->m_Data.at(j);
@@ -522,6 +556,8 @@ void CppGen::WriteTblConstructor(ofstream *outf, std::string &classname, CT_INFO
 			} else {
 				insrt << ",";
 			}
+		} else {
+			if (j == (tbl->m_Data.size() - 1)) { insrt << ")"; }
 		}
 	}
 	insrt << "\";";
@@ -612,6 +648,15 @@ void CppGen::WriteTblConstructor(ofstream *outf, std::string &classname, CT_INFO
 		case _ntext:
 			stype = "_ntext";
 			break;
+		case _binary:
+			stype = "_binary";
+			break;
+		case _varbinary:
+			stype = "_varbinary";
+			break;
+		case _image:
+			stype = "_image";
+			break;
 		default:
 			stype = "_unknown";
 			break;
@@ -680,10 +725,15 @@ void CppGen::WriteSetTableData(ofstream *outf, std::string &recclassname, CT_INF
 		case _text:
 		case _nchar:
 		case _nvarchar:
-		case _ntext: {
+		case _ntext: 
+		case _binary: 
+		case _varbinary:
+		case _image: {
 			CCharBuffer buf;
 			buf.name = (char *)rec.COLUMN_NAME;
+			
 			rec.mLength = rec.CHARACTER_OCTET_LENGTH + 1;
+			if (rec.mLength < 0) { rec.mLength = MAXBUF; }
 			if (rec.mLength > MAXBUF) {
 				rec.mLength = MAXBUF;
 				*outf << Tab << Tab << "char *" << buf.name << "= new char[MAXBUF];" << NL;
@@ -738,6 +788,15 @@ void CppGen::WriteSetTableData(ofstream *outf, std::string &recclassname, CT_INF
 				  << ", " << buf.length << ", 0);" << NL;
 			*outf << Tab << Tab << Tab << Tab << "rec." << rec.COLUMN_NAME << " = (char *)" << rec.COLUMN_NAME << ";"
 				  << NL;
+		} break;
+		case _binary: 
+		case _varbinary:
+		case _image: {
+			CCharBuffer buf = FindBuffer(&bufnames, rec.ORDINAL_POSITION);
+			*outf << Tab << Tab << Tab << Tab << "memset(" << rec.COLUMN_NAME << ",0," << buf.length << ");" << NL;
+			*outf << Tab << Tab << Tab << Tab << "com->GetData(" << (j + 1) << ", SQL_C_CHAR, " << rec.COLUMN_NAME
+				  << ", " << buf.length << ", 0);" << NL;
+			*outf << Tab << Tab << Tab << Tab << "memcpy(rec." << rec.COLUMN_NAME << ", " << rec.COLUMN_NAME << ", " << buf.length << ");" << NL;
 		} break;
 		default:
 			break;
@@ -840,6 +899,9 @@ std::string CppGen::Get_C_Type(eSqlType typ) {
 	case _nchar:
 	case _nvarchar:
 	case _ntext:
+	case _binary: 
+	case _varbinary:
+	case _image:
 		ret = "SQL_C_CHAR";
 		break;
 	default:

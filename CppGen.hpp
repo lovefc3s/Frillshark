@@ -251,6 +251,6 @@ private:
 								   "numeric",	"real",		"float",	 "smallmoney",	  "money",			"date",
 								   "time",		"datetime", "datetime2", "smalldatetime", "datetimeoffset", "char",
 								   "varchar",	"text",		"nchar",	 "nvarchar",	  "ntext",			"binary",
-								   "verbinary", "image",	"xml"};
+								   "varbinary", "image",	"xml"};
 };
 #endif
