@@ -6,7 +6,7 @@ enable_testing()
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(GTKMM gtkmm-3.0 REQUIRED)
 pkg_check_modules(ODBC odbc REQUIRED)
-
+set(CMAKE_CXX_STANDARD 17)
 #set (CMAKE_CXX_FLAGS "-g -fsanitize=address")
 add_executable(Frillshark
  stdafx.hpp
