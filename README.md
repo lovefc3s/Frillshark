@@ -44,5 +44,6 @@ cmakeで Make を使う設定から Ninja を使う設定に変えました
 ## 注意...  
 .Connection 1つに対して複数の Command 実行できない  
 .Connection に1つの command 1つの Tranzaction
-  
+COdbcConnection クラス コンストラクタをprotectedに変更しました。
+CodbcCommandを COdbcConnection 派生クラスに変更し COdbcComand から全て利用するよう変更した。
   
