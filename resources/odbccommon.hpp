@@ -550,7 +550,7 @@ public:
 };
 
 class COdbcConnection {
-public:
+protected:
 	COdbcConnection() { Initialize(); }
 	COdbcConnection(std::string Driver, std::string Server, std::string User,
 					std::string Password, std::string Database) {
@@ -573,6 +573,7 @@ public:
 			(org.m_Connect == SQL_SUCCESS_WITH_INFO)) {
 			this->DriverConnect();
 		}
+		return *this;
 	}
 	virtual ~COdbcConnection() {
 		if (m_Connect > -1) this->Disconnect();
@@ -652,6 +653,7 @@ public:
 		}
 		return ret;
 	}
+	int Get_Connect(){ return m_Connect; }
 	SQLRETURN Disconnect() { return SQLDisconnect(m_hdbc); }
 	SQLRETURN Get_ConnectAttr(SQLINTEGER Attribute, SQLPOINTER ValuePtr,
 							  SQLINTEGER BufferLength,
@@ -705,15 +707,45 @@ public:
 	}
 };
 
-class COdbcCommand {
+class COdbcCommand : public COdbcConnection{
 public:
-	COdbcCommand(COdbcConnection *pcon) {
-		_con = pcon;
-		m_CommandString = "";
-		m_henv = _con->Get_EnvironmentHandle();
-		m_hdbc = _con->Get_ConnectionHandle();
-		SQLAllocHandle(SQL_HANDLE_STMT, m_hdbc, &m_hstmt);
+	COdbcCommand():COdbcConnection (){
+		CommandInitialize();
 	}
+
+	COdbcCommand(std::string Driver, std::string Server, std::string User,
+					std::string Password, std::string Database):COdbcConnection(Driver, Server, User,
+					Password, Database) {
+		CommandInitialize();
+	}
+	COdbcCommand(const COdbcCommand &org){
+		m_driver = org.m_driver;
+		m_server = org.m_server;
+		m_database = org.m_database;
+		m_user = org.m_user;
+		m_password = org.m_password;
+		m_ConnectionString = org.m_ConnectionString;
+		if ((org.m_Connect == SQL_SUCCESS) ||
+			(org.m_Connect == SQL_SUCCESS_WITH_INFO)) {
+			this->DriverConnect();
+		}
+		CommandInitialize();
+	}
+	COdbcCommand &operator= (COdbcCommand &org) {
+		m_driver = org.m_driver;
+		m_server = org.m_server;
+		m_database = org.m_database;
+		m_user = org.m_user;
+		m_password = org.m_password;
+		m_ConnectionString = org.m_ConnectionString;
+		if ((org.m_Connect == SQL_SUCCESS) ||
+			(org.m_Connect == SQL_SUCCESS_WITH_INFO)) {
+			this->DriverConnect();
+		}
+		CommandInitialize();
+		return *this;
+	}
+
 	virtual ~COdbcCommand() {
 		if (m_hstmt != SQL_NULL_HSTMT) {
 			SQLFreeStmt(m_hstmt, 0);
@@ -742,6 +774,7 @@ public:
 
 	SQLRETURN mSQLExecDirect() {
 		SQLRETURN ret;
+		if (!m_hstmt) { return -1; }
 		ret =
 			SQLExecDirect(m_hstmt, (SQLCHAR *)m_CommandString.c_str(), SQL_NTS);
 		return ret;
@@ -825,11 +858,29 @@ protected:
 	std::string m_CommandString;
 
 protected:
-	SQLHENV m_henv = SQL_NULL_HENV;	   // Environment
-	SQLHDBC m_hdbc = SQL_NULL_HDBC;	   // Connection handle
-	SQLHSTMT m_hstmt = SQL_NULL_HSTMT; // Statement handle
-private:
-	COdbcConnection *_con;
+	//SQLHENV m_henv = SQL_NULL_HENV;	   // Environment
+	//SQLHDBC m_hdbc = SQL_NULL_HDBC;	   // Connection handle
+	//SQLHSTMT m_hstmt = SQL_NULL_HSTMT; // Statement handle
+//private:
+	//COdbcConnection *_con;
+public:
+	SQLRETURN CommandInitialize(){
+		//_con = this;
+		//m_CommandString = "";
+		//m_henv = _con->Get_EnvironmentHandle();
+		//m_hdbc = _con->Get_ConnectionHandle();
+		COdbcConnection *pcon = this;
+		if (pcon->Get_Connect() > -1){
+			pcon->Disconnect();
+		}
+		SQLRETURN ret = pcon->DriverConnect();
+		if(m_hstmt) {
+			SQLFreeHandle(SQL_HANDLE_STMT, m_hstmt);
+			m_hstmt = nullptr;
+		}
+		SQLAllocHandle(SQL_HANDLE_STMT, m_hdbc, &m_hstmt);
+		return ret;
+	}
 };
 class COdbcColumn {
 public:

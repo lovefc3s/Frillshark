@@ -94,14 +94,14 @@ void MainWindow::on_button1_clicked() {
 	dlg->set_filename(filename);
 	if (dlg->run() == Gtk::ResponseType::RESPONSE_OK) {
 		filename = dlg->get_filename();
-		OdbcCommon::COdbcConnection *con = new OdbcCommon::COdbcConnection();
-		con->Set_Driver(m_odbccombo->get_active_text());
-		con->Set_Server(m_servername->get_text());
-		con->Set_UserID(m_user->get_text());
-		con->Set_Password(m_pass->get_text());
-		con->Set_Database(m_database->get_text());
-		int re1 = con->DriverConnect();
-		CppGen *cpp = new CppGen(filename, m_ConnectionString, con, false);
+		OdbcCommon::COdbcCommand *com = new OdbcCommon::COdbcCommand();
+		com->Set_Driver(m_odbccombo->get_active_text());
+		com->Set_Server(m_servername->get_text());
+		com->Set_UserID(m_user->get_text());
+		com->Set_Password(m_pass->get_text());
+		com->Set_Database(m_database->get_text());
+		int re1 = com->DriverConnect();
+		CppGen *cpp = new CppGen(filename, m_ConnectionString, com, false);
 		int ret = cpp->Execute();
 		Gtk::MessageDialog *msg = nullptr;
 		if (ret == SQL_ERROR) {
@@ -115,7 +115,7 @@ void MainWindow::on_button1_clicked() {
 		}
 		if (msg) delete msg;
 		delete cpp;
-		delete con;
+		delete com;
 		string driver = m_odbccombo->get_active_text();
 		double comid = (double)m_odbccombo->get_active_row_number();
 		string server = m_servername->get_text();

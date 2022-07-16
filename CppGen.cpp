@@ -12,24 +12,25 @@ CCharBuffer::CCharBuffer() {
 }
 CCharBuffer::~CCharBuffer() {}
 
-CppGen::CppGen(std::string filename, std::string ConnectionString, OdbcCommon::COdbcConnection *pconnection,
+CppGen::CppGen(std::string filename, std::string ConnectionString, OdbcCommon::COdbcCommand *pcommand,
 			   bool UseClangFormat) {
 	m_filename = filename;
 	m_common = "";
 	m_ConnectionString = ConnectionString;
 	m_ClangFormat = UseClangFormat;
-	m_con = pconnection;
+	m_com = pcommand;
 	// m_Types = new std::vector<std::string>();
 }
 CppGen::~CppGen() { m_Key.m_Data.clear(); }
 int CppGen::Execute() {
 	SQLRETURN ret;
-	ret = m_con->DriverConnect();
+	ret = m_com->DriverConnect();
 	if (ret != SQL_SUCCESS && ret != SQL_SUCCESS_WITH_INFO) return ret;
 	string sql = "";
 	this->OdbcCommonWrite();
 	fs::path p = m_filename;
-	OdbcCommon::COdbcCommand *cm1 = new COdbcCommand(m_con);
+	OdbcCommon::COdbcCommand *cm1 = new OdbcCommon::COdbcCommand(*m_com);
+	ret = cm1->DriverConnect();
 	sql = "select @@version;";
 	cm1->SetCommandString(sql);
 	ret = cm1->mSQLExecDirect();
@@ -64,7 +65,7 @@ int CppGen::Execute() {
 		mservertype = 3;
 	}
 	if (mservertype == 0) return SQL_ERROR;
-	cm1 = new COdbcCommand(m_con);
+	cm1 = new COdbcCommand(*m_com);
 	ofstream *outf = new ofstream(m_filename);
 	HeaderWrite(outf);
 	*outf << "using namespace OdbcCommon;" << NL;
@@ -72,13 +73,13 @@ int CppGen::Execute() {
 		  "TABLE_TYPE FROM INFORMATION_SCHEMA.TABLES ";
 	switch (mservertype) {
 	case 1:
-		sql = sql + " WHERE TABLE_CATALOG = '" + m_con->Get_Database() + "';";
+		sql = sql + " WHERE TABLE_CATALOG = '" + m_com->Get_Database() + "';";
 		break;
 	case 2:
-		sql = sql + " WHERE TABLE_SCHEMA = '" + m_con->Get_Database() + "';";
+		sql = sql + " WHERE TABLE_SCHEMA = '" + m_com->Get_Database() + "';";
 		break;
 	case 3:
-		sql = sql + " WHERE TABLE_SCHEMA = 'public' AND TABLE_CATALOG = '" + m_con->Get_Database() + "';";
+		sql = sql + " WHERE TABLE_SCHEMA = 'public' AND TABLE_CATALOG = '" + m_com->Get_Database() + "';";
 		break;
 	default:
 		return SQL_ERROR;
@@ -106,7 +107,7 @@ int CppGen::Execute() {
 	}
 	for (int i = 0; i < vtbl->size(); i++) {
 		tblname = vtbl->at(i);
-		COdbcCommand *cm2 = new COdbcCommand(m_con);
+		COdbcCommand *cm2 = new COdbcCommand(*m_com);
 		sql = "SELECT TABLE_CATALOG, TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME, "
 			  "ORDINAL_POSITION, "
 			  "COLUMN_DEFAULT, IS_NULLABLE, DATA_TYPE, "
@@ -115,10 +116,10 @@ int CppGen::Execute() {
 			  "CHARACTER_SET_NAME, COLLATION_NAME "
 			  "FROM INFORMATION_SCHEMA.COLUMNS ";
 		if (mservertype == 2) {
-			sql = sql + " WHERE TABLE_SCHEMA = '" + m_con->Get_Database() + "' AND TABLE_NAME = '" + tblname +
+			sql = sql + " WHERE TABLE_SCHEMA = '" + m_com->Get_Database() + "' AND TABLE_NAME = '" + tblname +
 				  "' ORDER BY ORDINAL_POSITION;";
 		} else {
-			sql = sql + " WHERE TABLE_CATALOG = '" + m_con->Get_Database() + "' AND TABLE_NAME = '" + tblname +
+			sql = sql + " WHERE TABLE_CATALOG = '" + m_com->Get_Database() + "' AND TABLE_NAME = '" + tblname +
 				  "' ORDER BY ORDINAL_POSITION;";
 		}
 		string cpptablname = tblname;
@@ -131,14 +132,14 @@ int CppGen::Execute() {
 		WriteRecDestructor(outf, RecClassName);
 		CT_INFORMATION_SCHEMA_COLUMNS *tbl = new CT_INFORMATION_SCHEMA_COLUMNS();
 		ret = cm2->mSQLExecDirect(sql);
-		COdbcConnection consys;
+		COdbcCommand comsys;
 
-		consys.Set_Driver(m_con->Get_Driver());
-		consys.Set_Server(m_con->Get_Server());
-		consys.Set_UserID(m_con->Get_UserID());
-		consys.Set_Password(m_con->Get_Password());
-		consys.Set_Database(m_con->Get_Database());
-		consys.DriverConnect();
+		comsys.Set_Driver(m_com->Get_Driver());
+		comsys.Set_Server(m_com->Get_Server());
+		comsys.Set_UserID(m_com->Get_UserID());
+		comsys.Set_Password(m_com->Get_Password());
+		comsys.Set_Database(m_com->Get_Database());
+		comsys.DriverConnect();
 
 		for (int j = 0;; j++) {
 			ret = cm2->mFetch();
@@ -152,12 +153,12 @@ int CppGen::Execute() {
 					string ident = "SELECT name,column_id,is_identity from "
 								   "sys.columns where object_Id = OBJECT_ID('" +
 								   tblname + "','U') and name = '" + (char *)rec.COLUMN_NAME + "'";
-					COdbcCommand csys(&consys);
-					ret = csys.mSQLExecDirect(ident);
+					comsys.SetCommandString(ident);
+					ret = comsys.mSQLExecDirect(ident);
 					if (ret == SQL_SUCCESS || ret == SQL_SUCCESS_WITH_INFO) {
-						ret = csys.mFetch();
+						ret = comsys.mFetch();
 						if (ret == SQL_SUCCESS || ret == SQL_SUCCESS_WITH_INFO) {
-							csys.GetData(3, SQL_C_LONG, &rec.mIdentity, 4, 0);
+							comsys.GetData(3, SQL_C_LONG, &rec.mIdentity, 4, 0);
 						}
 					}
 				}
@@ -165,7 +166,7 @@ int CppGen::Execute() {
 			} else
 				break;
 		}
-		consys.Disconnect();
+		comsys.Disconnect();
 		WriteRecInitialize(outf, tbl);
 		WriteRecordData(outf, tbl);
 		WriteRecordOperator(outf, tbl);
@@ -173,7 +174,7 @@ int CppGen::Execute() {
 		/*
 			Table Class
 		*/
-		GetKeyColumnUsage(outf, m_con, tblname);
+		GetKeyColumnUsage(outf, m_com, tblname);
 		*outf << "class " << TblClassName << ":public COdbcTable {" << NL;
 		*outf << "public:" << NL;
 		WriteTblConstructor(outf, TblClassName, tbl, tblname);
@@ -190,7 +191,7 @@ int CppGen::Execute() {
 		delete tbl;
 		delete cm2;
 	}
-	ret = m_con->Disconnect();
+	ret = m_com->Disconnect();
 	delete vtbl;
 	*outf << "#endif" << NL;
 	outf->close();
@@ -249,11 +250,11 @@ void CppGen::HeaderWrite(ofstream *ofile) {
 	*ofile << "/*" << NL;
 	*ofile << Tab << "This file FrillShark Odbc C++ source Generation." << NL;
 	*ofile << Tab << p.stem() << p.extension() << NL;
-	*ofile << Tab << "Set_Driver(\"" << m_con->Get_Driver() << "\");" << NL;
-	*ofile << Tab << "Set_Server(\"" << m_con->Get_Server() << "\");" << NL;
-	*ofile << Tab << "Set_UserID(\"" << m_con->Get_UserID() << "\");" << NL;
+	*ofile << Tab << "Set_Driver(\"" << m_com->Get_Driver() << "\");" << NL;
+	*ofile << Tab << "Set_Server(\"" << m_com->Get_Server() << "\");" << NL;
+	*ofile << Tab << "Set_UserID(\"" << m_com->Get_UserID() << "\");" << NL;
 	*ofile << Tab << "Set_Password(\" .... \");" << NL;
-	*ofile << Tab << "Set_Database(\"" << m_con->Get_Database() << "\");" << NL;
+	*ofile << Tab << "Set_Database(\"" << m_com->Get_Database() << "\");" << NL;
 	*ofile << Tab << m_ServarVarsion << NL;
 	*ofile << "*/" << NL;
 	*ofile << NL;
@@ -275,29 +276,29 @@ void CppGen::HeaderWrite(ofstream *ofile) {
 	*ofile << "#define __" << destination << "__" << NL;
 	*ofile << "#include \"" << m_common << "\"" << NL;
 }
-void CppGen::GetKeyColumnUsage(ofstream *ofile, COdbcConnection *con, std::string tablename) {
+void CppGen::GetKeyColumnUsage(ofstream *ofile, COdbcCommand *com, std::string tablename) {
 	std::string strSql = "SELECT CONSTRAINT_NAME, TABLE_CATALOG, TABLE_SCHEMA, TABLE_NAME, "
 						 "COLUMN_NAME, ORDINAL_POSITION FROM "
 						 "INFORMATION_SCHEMA.KEY_COLUMN_USAGE ";
 	if (mservertype == 2) {
-		strSql = strSql + " WHERE TABLE_SCHEMA = '" + con->Get_Database() + "' AND TABLE_NAME = '" + tablename + "' ";
+		strSql = strSql + " WHERE TABLE_SCHEMA = '" + com->Get_Database() + "' AND TABLE_NAME = '" + tablename + "' ";
 	} else {
-		strSql = strSql + " WHERE TABLE_CATALOG = '" + con->Get_Database() + "' AND TABLE_NAME = '" + tablename + "' ";
+		strSql = strSql + " WHERE TABLE_CATALOG = '" + com->Get_Database() + "' AND TABLE_NAME = '" + tablename + "' ";
 	}
 	strSql = strSql + "  ORDER BY CONSTRAINT_NAME,ORDINAL_POSITION;";
 	m_Key.m_Data.clear();
-	COdbcCommand *com = new COdbcCommand(con);
-	SQLRETURN ret = com->mSQLExecDirect(strSql);
+	COdbcCommand *co2 = new COdbcCommand(*com);
+	SQLRETURN ret = co2->mSQLExecDirect(strSql);
 	for (int j = 0;; j++) {
-		ret = com->mFetch();
+		ret = co2->mFetch();
 		if (ret == SQL_SUCCESS || ret == SQL_SUCCESS_WITH_INFO) {
 			CR_INFORMATION_SCHEMA_KEY_COLUMN_USAGE rec;
-			m_Key.Set_Data(com, &rec);
+			m_Key.Set_Data(co2, &rec);
 			m_Key.m_Data.push_back(rec);
 		} else
 			break;
 	}
-	delete com;
+	delete co2;
 }
 
 void CppGen::WriteRecConstructor(ofstream *outf, std::string classname) {
@@ -912,21 +913,21 @@ std::string CppGen::Get_C_Type(eSqlType typ) {
 }
 void CppGen::WriteSynchronize(ofstream *outf, std::string &Recordclassname, CT_INFORMATION_SCHEMA_COLUMNS *tbl) {
 	*outf << "public:" << NL;
-	*outf << Tab << "void Synchronize(COdbcConnection &con) {" << NL;
+	*outf << Tab << "void Synchronize(COdbcCommand &com) {" << NL;
 	*outf << Tab << Tab << "if (setlocale(LC_CTYPE, \"\") == NULL) return;" << NL;
 	*outf << Tab << Tab << "int icnt = 0;" << NL;
 	*outf << Tab << Tab << "SQLRETURN ret;" << NL;
 	*outf << Tab << Tab << "for (int n = 0; n < this->m_Data.size(); n++) {" << NL;
 	*outf << Tab << Tab << Tab << Recordclassname << " rec = this->m_Data[n];" << NL;
 	*outf << Tab << Tab << Tab << "std::string sql = \"\";" << NL;
-	*outf << Tab << Tab << Tab << "COdbcConnection co2;" << NL;
-	*outf << Tab << Tab << Tab << "co2.Set_Driver(con.Get_Driver());" << NL;
-	*outf << Tab << Tab << Tab << "co2.Set_Server(con.Get_Server());" << NL;
-	*outf << Tab << Tab << Tab << "co2.Set_UserID(con.Get_UserID());" << NL;
-	*outf << Tab << Tab << Tab << "co2.Set_Password(con.Get_Password());" << NL;
-	*outf << Tab << Tab << Tab << "co2.Set_Database(con.Get_Database());" << NL;
+	*outf << Tab << Tab << Tab << "COdbcCommand co2;" << NL;
+	*outf << Tab << Tab << Tab << "co2.Set_Driver(com.Get_Driver());" << NL;
+	*outf << Tab << Tab << Tab << "co2.Set_Server(com.Get_Server());" << NL;
+	*outf << Tab << Tab << Tab << "co2.Set_UserID(com.Get_UserID());" << NL;
+	*outf << Tab << Tab << Tab << "co2.Set_Password(com.Get_Password());" << NL;
+	*outf << Tab << Tab << Tab << "co2.Set_Database(com.Get_Database());" << NL;
 	*outf << Tab << Tab << Tab << "co2.DriverConnect();" << NL;
-	*outf << Tab << Tab << Tab << "COdbcCommand com(&co2);" << NL;
+	//*outf << Tab << Tab << Tab << "COdbcCommand com(co2);" << NL;
 	*outf << Tab << Tab << Tab << "switch (rec.get_Modify()) {" << NL;
 	*outf << Tab << Tab << Tab << "case _NoModify:" << NL;
 	*outf << Tab << Tab << Tab << "case _Select:" << NL;
@@ -947,7 +948,7 @@ void CppGen::WriteSynchronize(ofstream *outf, std::string &Recordclassname, CT_I
 	*outf << Tab << Tab << Tab << Tab << Tab << "}" << NL;
 	*outf << Tab << Tab << Tab << Tab << "}" << NL;
 	*outf << Tab << Tab << Tab << Tab << "sql = sql + \") VALUES (\" + ss.str() + \")\";" << NL;
-	*outf << Tab << Tab << Tab << Tab << "ret = com.mSQLExecDirect(sql);" << NL;
+	*outf << Tab << Tab << Tab << Tab << "ret = co2.mSQLExecDirect(sql);" << NL;
 	*outf << Tab << Tab << Tab << "} break;" << NL;
 	*outf << Tab << Tab << Tab << "case _Update: {" << NL;
 	*outf << Tab << Tab << Tab << Tab << "sql = \"UPDATE \" + Get_Name() + \" SET \";" << NL;
@@ -962,11 +963,11 @@ void CppGen::WriteSynchronize(ofstream *outf, std::string &Recordclassname, CT_I
 	*outf << Tab << Tab << Tab << Tab << Tab << "}" << NL;
 	*outf << Tab << Tab << Tab << Tab << "}" << NL;
 	*outf << Tab << Tab << Tab << Tab << "sql = sql + WherePrimaryKey(n);" << NL;
-	*outf << Tab << Tab << Tab << Tab << "ret = com.mSQLExecDirect(sql);" << NL;
+	*outf << Tab << Tab << Tab << Tab << "ret = co2.mSQLExecDirect(sql);" << NL;
 	*outf << Tab << Tab << Tab << "} break;" << NL;
 	*outf << Tab << Tab << Tab << "case _Delete: {" << NL;
 	*outf << Tab << Tab << Tab << Tab << "sql = \"DELETE \" + Get_Name() + WherePrimaryKey(n);" << NL;
-	*outf << Tab << Tab << Tab << Tab << "ret = com.mSQLExecDirect(sql);" << NL;
+	*outf << Tab << Tab << Tab << Tab << "ret = co2.mSQLExecDirect(sql);" << NL;
 	*outf << Tab << Tab << Tab << "} break;" << NL;
 	*outf << Tab << Tab << Tab << "}" << NL;
 	*outf << Tab << Tab << "}" << NL;

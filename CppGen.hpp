@@ -213,7 +213,7 @@ public:
 namespace fs = std::filesystem;
 class CppGen {
 public:
-	CppGen(std::string filename, std::string ConnectionString, OdbcCommon::COdbcConnection *pconnection,
+	CppGen(std::string filename, std::string ConnectionString, OdbcCommon::COdbcCommand *pcommand,
 		   bool UseClangFormat = false);
 	virtual ~CppGen();
 	int Execute();
@@ -221,7 +221,7 @@ public:
 protected:
 	void OdbcCommonWrite();
 	void HeaderWrite(ofstream *outfile);
-	void GetKeyColumnUsage(ofstream *ofile, COdbcConnection *con, std::string tablename);
+	void GetKeyColumnUsage(ofstream *ofile, COdbcCommand *com, std::string tablename);
 	void WriteRecConstructor(ofstream *outf, std::string classname);
 	void WriteRecDestructor(ofstream *outf, std::string classname);
 	void WriteRecInitialize(ofstream *outf, CT_INFORMATION_SCHEMA_COLUMNS *tbl);
@@ -245,7 +245,7 @@ private:
 	std::string m_ServarVarsion;
 	int mservertype = 0;
 	bool m_ClangFormat;
-	OdbcCommon::COdbcConnection *m_con;
+	OdbcCommon::COdbcCommand *m_com;
 	CT_INFORMATION_SCHEMA_KEY_COLUMN_USAGE m_Key;
 	std::vector<string> m_Types = {"bit",		"tinyint",	"smallint",	 "int",			  "bigint",			"decimal",
 								   "numeric",	"real",		"float",	 "smallmoney",	  "money",			"date",
